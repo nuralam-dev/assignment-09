@@ -1,16 +1,15 @@
-
 "use client";
 
-import { useState, type FormEvent } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useState, type FormEvent } from "react";
 
 import {
-  FiSearch,
   FiArrowRight,
-  FiTool,
-  FiSmartphone,
   FiMonitor,
+  FiSearch,
+  FiSmartphone,
+  FiTool,
   FiTv,
   FiZap,
 } from "react-icons/fi";
@@ -44,8 +43,7 @@ export default function Banner() {
   };
 
   return (
-    <section className="bg-[#f5f8f8] pb-20">
-
+    <section className="bg-[#f5f8f8]  pb-20 ">
       {/* Hero Area */}
       <div
         className="relative flex min-h-145 items-center bg-cover bg-center"
@@ -55,7 +53,6 @@ export default function Banner() {
         }}
       >
         <div className="mx-auto w-full max-w-7xl px-5 pb-24 pt-20 md:px-8">
-
           {/* Small Badge */}
           <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-2 text-sm text-white">
             <FiTool className="text-orange-400" />
@@ -66,16 +63,14 @@ export default function Banner() {
           <h1 className="max-w-3xl text-4xl font-bold leading-tight text-white md:text-6xl">
             Expert Repairs.
             <br />
-            <span className="text-orange-400">
-              Zero Hassle.
-            </span>
+            <span className="text-orange-400">Zero Hassle.</span>
           </h1>
 
           {/* Description */}
           <p className="mt-6 max-w-xl text-base leading-8 text-gray-200 md:text-lg">
-            Find trusted technicians for your everyday
-            devices and home appliances. Book a repair,
-            track the progress, and pay after completion.
+            Find trusted technicians for your everyday devices and home
+            appliances. Book a repair, track the progress, and pay after
+            completion.
           </p>
 
           {/* Search Form */}
@@ -114,9 +109,7 @@ export default function Banner() {
 
       {/* Category Section */}
       <div className="relative z-10 mx-auto -mt-16 max-w-7xl px-4 md:px-8">
-
         <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-xl md:p-8">
-
           <div className="mb-6 flex items-center justify-between gap-3">
             <h2 className="text-xl font-bold text-slate-800 md:text-2xl">
               Explore Repair Categories

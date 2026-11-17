@@ -1,23 +1,21 @@
-
 "use client";
 
-import { useState, type ChangeEvent, type FormEvent } from "react";
 import Link from "next/link";
+import { useState, type ChangeEvent, type FormEvent } from "react";
 
 import {
-  FiUser,
-  FiMail,
-  FiLock,
+  FiArrowRight,
   FiEye,
   FiEyeOff,
-  FiArrowRight,
+  FiLock,
+  FiMail,
+  FiUser,
 } from "react-icons/fi";
 
 import AuthLayout from "@/components/auth/AuthLayout";
 import GoogleAuthButton from "@/components/auth/GoogleAuthButton";
 
 export default function SignUpPage() {
-
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState("");
@@ -89,9 +87,7 @@ export default function SignUpPage() {
 
   return (
     <AuthLayout>
-
       <div className="rounded-2xl border border-gray-100 bg-white p-7 shadow-xl shadow-gray-200/50 sm:p-10">
-
         {/* Header */}
         <div className="mb-7">
           <span className="inline-block rounded-lg bg-orange-50 px-4 py-2 text-sm font-medium text-orange-600">
@@ -109,7 +105,6 @@ export default function SignUpPage() {
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-5">
-
           {/* Full Name */}
           <div>
             <label
@@ -224,7 +219,9 @@ export default function SignUpPage() {
               <button
                 type="button"
                 onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                aria-label={showConfirmPassword ? "Hide password" : "Show password"}
+                aria-label={
+                  showConfirmPassword ? "Hide password" : "Show password"
+                }
                 className="absolute right-4 top-1/2 -translate-y-1/2 text-lg text-gray-400 hover:text-teal-700"
               >
                 {showConfirmPassword ? <FiEyeOff /> : <FiEye />}
@@ -247,16 +244,13 @@ export default function SignUpPage() {
             Create Account
             <FiArrowRight />
           </button>
-
         </form>
 
         {/* Divider */}
         <div className="my-7 flex items-center gap-4">
           <div className="h-px flex-1 bg-gray-200" />
 
-          <span className="text-sm text-gray-400">
-            Or sign up with
-          </span>
+          <span className="text-sm text-gray-400">Or sign up with</span>
 
           <div className="h-px flex-1 bg-gray-200" />
         </div>
@@ -274,9 +268,7 @@ export default function SignUpPage() {
             Sign In
           </Link>
         </p>
-
       </div>
-
     </AuthLayout>
   );
 }
