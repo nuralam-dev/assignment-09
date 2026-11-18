@@ -11,5 +11,9 @@ async function DashboardRedirect() {
 }
 
 export default function DashboardPage() {
-  return <Suspense fallback={<p role="status">Opening your dashboard...</p>}><DashboardRedirect /></Suspense>;
+  return (
+    <Suspense fallback={<p role="status">Opening your dashboard...</p>}>
+      <DashboardRedirect />
+    </Suspense>
+  );
 }
