@@ -1,11 +1,8 @@
-
 "use client";
 
-import { FcGoogle } from "react-icons/fc";
+import type { GoogleAuthButtonProps } from "@/typs";
 
-type GoogleAuthButtonProps = {
-  text: string;
-};
+import { FcGoogle } from "react-icons/fc";
 
 export default function GoogleAuthButton({
   text,

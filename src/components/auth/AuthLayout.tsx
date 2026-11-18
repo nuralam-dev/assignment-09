@@ -1,11 +1,7 @@
+import type { AuthLayoutProps } from "@/typs";
 
 import Link from "next/link";
 import { FiTool, FiCheckCircle } from "react-icons/fi";
-import type { ReactNode } from "react";
-
-type AuthLayoutProps = {
-  children: ReactNode;
-};
 
 export default function AuthLayout({
   children,

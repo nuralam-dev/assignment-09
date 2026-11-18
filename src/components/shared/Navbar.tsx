@@ -1,5 +1,7 @@
 "use client";
 
+import type { AccountMenuProps } from "@/typs";
+
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
@@ -19,10 +21,7 @@ const navLinks = [
 function AccountMenu({
   user,
   onNavigate,
-}: {
-  user: { name: string; email: string };
-  onNavigate?: () => void;
-}) {
+}: AccountMenuProps) {
   const [isSigningOut, setIsSigningOut] = useState(false);
   const itemClassName =
     "flex cursor-pointer items-center gap-2 rounded-md px-3 py-2 text-sm outline-none data-highlighted:bg-teal-50 data-highlighted:text-teal-800 [&_svg]:size-4";

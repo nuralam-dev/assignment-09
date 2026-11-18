@@ -1,5 +1,7 @@
 "use client"
 
+import type { ToastIconProps } from "@/typs";
+
 import * as React from "react"
 import { Toast as ToastPrimitive } from "@base-ui/react/toast"
 import { cn } from "cn"
@@ -132,7 +134,7 @@ function ToastClose({
   )
 }
 
-function ToastIcon({ type }: { type: string | undefined }) {
+function ToastIcon({ type }: ToastIconProps) {
   let icon: React.ReactNode = null
 
   if (type === "success") {
