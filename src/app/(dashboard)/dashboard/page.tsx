@@ -1,10 +1,15 @@
 import type { Metadata } from "next";
-import DashboardOverview from "@/components/dashboard/DashboardOverview";
+import { Suspense } from "react";
+import { redirect } from "next/navigation";
+import { requireDashboardUser } from "@/lib/dashboard-access";
 
-export const metadata: Metadata = {
-  title: "Dashboard | FixMate",
-};
+export const metadata: Metadata = { title: "Dashboard | FixMate" };
+
+async function DashboardRedirect() {
+  const user = await requireDashboardUser();
+  return redirect(`/dashboard/${user.role}`);
+}
 
 export default function DashboardPage() {
-  return <DashboardOverview />;
+  return <Suspense fallback={<p role="status">Opening your dashboard...</p>}><DashboardRedirect /></Suspense>;
 }

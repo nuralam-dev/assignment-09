@@ -1,284 +1,109 @@
 "use client";
 
-import type { DashboardSidebarProps, MenuItem } from "@/typs";
-
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-
+import { FiLogOut, FiTool } from "react-icons/fi";
+import type { DashboardSidebarProps } from "@/typs";
+import { accountMenu, sidebarMenus } from "./sidebarMenus";
 import {
-  FiTool,
-  FiGrid,
-  FiCalendar,
-  FiCreditCard,
-  FiPlusCircle,
-  FiClipboard,
-  FiUsers,
-  FiCheckCircle,
-  FiList,
-  FiDollarSign,
-  FiUser,
-  FiHome,
-  FiLogOut,
-} from "react-icons/fi";
-
-import {
-  Sidebar,
-  SidebarContent,
-  SidebarFooter,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarGroupLabel,
-  SidebarHeader,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-  useSidebar,
+  Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent,
+  SidebarGroupLabel, SidebarHeader, SidebarMenu, SidebarMenuButton,
+  SidebarMenuItem, useSidebar,
 } from "@/components/ui/sidebar";
 
-// Customer Menu
-const customerMenu: MenuItem[] = [
-  {
-    title: "Overview",
-    url: "/dashboard",
-    icon: FiGrid,
-  },
-  {
-    title: "My Bookings",
-    url: "/dashboard/customer/bookings",
-    icon: FiCalendar,
-  },
-  {
-    title: "Payment History",
-    url: "/dashboard/customer/payments",
-    icon: FiCreditCard,
-  },
-];
-
-// Technician Menu
-const technicianMenu: MenuItem[] = [
-  {
-    title: "Overview",
-    url: "/dashboard",
-    icon: FiGrid,
-  },
-  {
-    title: "Add Service",
-    url: "/dashboard/technician/add-service",
-    icon: FiPlusCircle,
-  },
-  {
-    title: "My Services",
-    url: "/dashboard/technician/my-services",
-    icon: FiTool,
-  },
-  {
-    title: "Manage Requests",
-    url: "/dashboard/technician/requests",
-    icon: FiClipboard,
-  },
-];
-
-// Admin Menu
-const adminMenu: MenuItem[] = [
-  {
-    title: "Overview",
-    url: "/dashboard",
-    icon: FiGrid,
-  },
-  {
-    title: "Manage Users",
-    url: "/dashboard/admin/users",
-    icon: FiUsers,
-  },
-  {
-    title: "Service Approval",
-    url: "/dashboard/admin/services",
-    icon: FiCheckCircle,
-  },
-  {
-    title: "All Bookings",
-    url: "/dashboard/admin/bookings",
-    icon: FiList,
-  },
-  {
-    title: "Transactions",
-    url: "/dashboard/admin/transactions",
-    icon: FiDollarSign,
-  },
-];
-
 export default function DashboardSidebar({
-  role,
-  userName,
-  onSignOut,
+  role, userName, isSigningOut, onSignOut,
 }: DashboardSidebarProps) {
-
   const pathname = usePathname();
   const { setOpenMobile } = useSidebar();
+  const menuItems = sidebarMenus[role];
+  const menuClassName = "h-11 rounded-xl text-[#092e33] transition-colors hover:bg-orange-50 hover:text-orange-700 data-active:bg-[#f97316] data-active:text-white data-active:hover:bg-orange-600 data-active:hover:text-white";
 
-  // Select Menu Based on Role
-  let menuItems = customerMenu;
-
-  if (role === "technician") {
-    menuItems = technicianMenu;
-  }
-
-  if (role === "admin") {
-    menuItems = adminMenu;
-  }
-
-  // Check Active Menu
   const isActive = (url: string) => {
     if (pathname === url) return true;
-
-    // Prevent Overview from highlighting child routes
-    if (url === "/dashboard") {
-      return false;
-    }
-
-    return pathname.startsWith(url + "/");
+    // Overview is active only on its own page.
+    if (url === `/dashboard/${role}` || url === "/") return false;
+    return pathname.startsWith(`${url}/`);
   };
 
-  // Close Mobile Sidebar After Navigation
-  const closeSidebar = () => {
-    setOpenMobile(false);
-  };
+  const closeSidebar = () => setOpenMobile(false);
 
   return (
     <Sidebar collapsible="icon" className="border-r border-slate-200/70">
-
-      {/* Sidebar Header */}
-      <SidebarHeader className="border-b px-3 py-4">
-
+      <SidebarHeader className="border-b border-slate-100 px-3 py-4">
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton
-              render={<Link href="/" onClick={closeSidebar} />}
-              size="lg"
-              tooltip="FixMate"
-            >
-                <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-orange-500 text-white">
-                  <FiTool className="size-5" />
-                </div>
-
-                <span className="text-xl font-bold text-[#092e33]">
-                  Fix<span className="text-orange-500">Mate</span>
-                </span>
+            <SidebarMenuButton render={<Link href="/" onClick={closeSidebar} />} size="lg" tooltip="FixMate" className="gap-3">
+              <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-[#092e33] text-orange-400">
+                <FiTool className="size-5" aria-hidden="true" />
+              </span>
+              <span className="text-xl font-bold tracking-tight text-[#092e33]">Fix<span className="text-[#f97316]">Mate</span></span>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
-
       </SidebarHeader>
 
-      {/* Sidebar Content */}
-      <SidebarContent>
-
+      <SidebarContent className="gap-2 px-1 py-3">
         <SidebarGroup>
-          <SidebarGroupLabel>
-            {role.charAt(0).toUpperCase() + role.slice(1)}
-            {" "}Dashboard
-          </SidebarGroupLabel>
-
+          <SidebarGroupLabel className="mb-2 text-xs tracking-wide text-slate-400 capitalize">{role} Dashboard</SidebarGroupLabel>
           <SidebarGroupContent>
-            <SidebarMenu>
-
+            <SidebarMenu className="gap-1">
               {menuItems.map((item) => {
                 const Icon = item.icon;
-
                 return (
                   <SidebarMenuItem key={item.url}>
                     <SidebarMenuButton
-                      render={<Link href={item.url} onClick={closeSidebar} />}
-                      isActive={isActive(item.url)}
-                      tooltip={item.title}
-                      className="h-11 rounded-lg text-slate-600 transition-colors data-active:bg-teal-50 data-active:text-teal-800 data-active:hover:bg-teal-100"
+                      render={<Link href={item.url} onClick={closeSidebar} aria-current={isActive(item.url) ? "page" : undefined} />}
+                      isActive={isActive(item.url)} tooltip={item.title} className={menuClassName}
                     >
-                        <Icon className="size-5" />
-                        <span>{item.title}</span>
+                      <Icon aria-hidden="true" />
+                      <span>{item.title}</span>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 );
               })}
-
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
 
-        {/* Account Section */}
         <SidebarGroup>
-          <SidebarGroupLabel>Account</SidebarGroupLabel>
-
+          <SidebarGroupLabel className="mb-2 text-xs tracking-wide text-slate-400">Account</SidebarGroupLabel>
           <SidebarGroupContent>
-            <SidebarMenu>
-
-              {/* Update Profile */}
+            <SidebarMenu className="gap-1">
+              {accountMenu.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <SidebarMenuItem key={item.url}>
+                    <SidebarMenuButton
+                      render={<Link href={item.url} onClick={closeSidebar} aria-current={isActive(item.url) ? "page" : undefined} />}
+                      isActive={isActive(item.url)} tooltip={item.title} className={menuClassName}
+                    >
+                      <Icon aria-hidden="true" />
+                      <span>{item.title}</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                );
+              })}
               <SidebarMenuItem>
-                <SidebarMenuButton
-                  render={<Link href="/dashboard/profile" onClick={closeSidebar} />}
-                  isActive={isActive("/dashboard/profile")}
-                  tooltip="Update Profile"
-                  className="h-11 data-[active=true]:bg-orange-500 data-[active=true]:text-white"
-                >
-                    <FiUser className="size-5" />
-                    <span>Update Profile</span>
+                <SidebarMenuButton onClick={onSignOut} disabled={isSigningOut} tooltip="Sign Out" className="h-11 rounded-xl text-red-600 hover:bg-red-50 hover:text-red-700">
+                  <FiLogOut aria-hidden="true" />
+                  <span>{isSigningOut ? "Signing out..." : "Sign Out"}</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
-
-              {/* Back to Home */}
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  render={<Link href="/" onClick={closeSidebar} />}
-                  tooltip="Back to Home"
-                  className="h-11"
-                >
-                    <FiHome className="size-5" />
-                    <span>Back to Home</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
-
       </SidebarContent>
 
-      {/* Sidebar Footer */}
-      <SidebarFooter className="border-t p-3">
-
-        {/* User Information */}
-        <div className="flex items-center gap-3 rounded-lg bg-gray-100 p-2 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:p-1">
-
-          <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-orange-500 font-bold text-white">
-            {userName.charAt(0).toUpperCase()}
-          </div>
-
+      <SidebarFooter className="border-t border-slate-100 p-3">
+        <div className="flex items-center gap-3 rounded-xl bg-slate-50 p-2 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:p-0">
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-[#092e33] text-sm font-semibold text-white" aria-hidden="true">{userName.trim().charAt(0).toUpperCase() || "U"}</span>
           <div className="min-w-0 group-data-[collapsible=icon]:hidden">
-            <p className="truncate text-sm font-semibold text-slate-800">
-              {userName}
-            </p>
-
-            <p className="text-xs capitalize text-slate-500">
-              {role}
-            </p>
+            <p className="truncate text-sm font-semibold text-[#092e33]">{userName}</p>
+            <p className="text-xs text-slate-500 capitalize">{role}</p>
           </div>
         </div>
-
-        {/* Sign Out */}
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton
-              onClick={onSignOut}
-              tooltip="Sign Out"
-              className="h-11 text-red-600 hover:bg-red-50 hover:text-red-700"
-            >
-              <FiLogOut className="size-5" />
-              <span>Sign Out</span>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
-
       </SidebarFooter>
-
     </Sidebar>
   );
 }
