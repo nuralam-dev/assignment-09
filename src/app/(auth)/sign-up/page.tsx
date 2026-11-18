@@ -14,11 +14,15 @@ import {
 
 import AuthLayout from "@/components/auth/AuthLayout";
 import GoogleAuthButton from "@/components/auth/GoogleAuthButton";
+import { toast } from "@/components/ui/toast";
+import { signUp } from "@/lib/auth-client";
+import { useRouter } from "next/navigation";
 
 export default function SignUpPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState("");
+  const router = useRouter();
 
   const [formData, setFormData] = useState({
     name: "",
@@ -36,7 +40,7 @@ export default function SignUpPage() {
   };
 
   // Form Submit Function
-  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError("");
 
@@ -73,16 +77,44 @@ export default function SignUpPage() {
     }
 
     // TODO: Implement BetterAuth Sign Up here.
-    // 1. Call authClient.signUp.email()
-    // 2. Send name, email and password
-    // 3. Server should assign default role "customer"
-    // 4. Show success/error toast
-    // 5. Redirect after successful registration
 
-    console.log("Sign Up Data:", {
-      name,
-      email,
-    });
+    try {
+      const { data, error } = await signUp.email({
+        name: name.trim(),
+        email: email.trim(),
+        password: password,
+        callbackURL: "/",
+      });
+      if (error) {
+        console.log("Sign Up Error:", error);
+        setError(error.message || "Failed to create account.");
+        toast.add({
+          type: "error",
+          title: "Sign up failed",
+          description: error.message || "Failed to create account.",
+        });
+        return;
+      }
+
+      toast.add({
+        type: "success",
+        title: "Success",
+        description: "Account created successfully.",
+      });
+
+      console.log("Sign Up Success:", data);
+
+      // Redirect only after successful sign up
+      router.push("/");
+    } catch (err) {
+      console.error("Unexpected Sign Up Error:", err);
+      setError("Something went wrong. Please try again.");
+      toast.add({
+        type: "error",
+        title: "Sign up failed",
+        description: "Something went wrong. Please try again.",
+      });
+    }
   };
 
   return (

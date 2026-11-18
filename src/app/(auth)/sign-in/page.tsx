@@ -1,22 +1,16 @@
-
 "use client";
 
-import { useState, type FormEvent, type ChangeEvent } from "react";
 import Link from "next/link";
+import { useState, type ChangeEvent, type FormEvent } from "react";
 
-import {
-  FiMail,
-  FiLock,
-  FiEye,
-  FiEyeOff,
-  FiArrowRight,
-} from "react-icons/fi";
+import { FiArrowRight, FiEye, FiEyeOff, FiLock, FiMail } from "react-icons/fi";
 
 import AuthLayout from "@/components/auth/AuthLayout";
 import GoogleAuthButton from "@/components/auth/GoogleAuthButton";
+import { toast } from "@/components/ui/toast";
+import { signIn } from "@/lib/auth-client";
 
 export default function SignInPage() {
-
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
 
@@ -34,30 +28,58 @@ export default function SignInPage() {
   };
 
   // Form Submit Function
-  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError("");
 
     if (!formData.email.trim() || !formData.password) {
       setError("Please fill in all fields.");
+      toast.add({
+        type: "error",
+        title: "Sign in failed",
+        description: "Please fill in all fields.",
+      });
       return;
     }
 
-    // TODO: Implement BetterAuth Sign In here.
-    // 1. Call authClient.signIn.email()
-    // 2. Show success or error toast
-    // 3. Redirect to correct dashboard
+    try {
+      const { error } = await signIn.email({
+        email: formData.email, 
+        password: formData.password, 
+        rememberMe: true, 
+        callbackURL: "/",
+      });
 
-    console.log("Sign In Data:", {
-      email: formData.email,
-    });
+      if (error) {
+        toast.add({
+          type: "error",
+          title: "Sign in failed",
+          description: error.message || "Failed to sign in. Please try again.",
+        });
+        return;
+      }
+
+      toast.add({
+        type: "success",
+        title: "Success",
+        description: "Signed in successfully.",
+      });
+
+      console.log("Sign In Data:", {
+        email: formData.email,
+      });
+    } catch {
+      toast.add({
+        type: "error",
+        title: "Sign in failed",
+        description: "Something went wrong. Please try again.",
+      });
+    }
   };
 
   return (
     <AuthLayout>
-
       <div className="rounded-2xl border border-gray-100 bg-white p-7 shadow-xl shadow-gray-200/50 sm:p-10">
-
         {/* Header */}
         <div className="mb-8">
           <span className="inline-block rounded-lg bg-orange-50 px-4 py-2 text-sm font-medium text-orange-600">
@@ -75,7 +97,6 @@ export default function SignInPage() {
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-5">
-
           {/* Email */}
           <div>
             <label
@@ -137,12 +158,8 @@ export default function SignInPage() {
 
           {/* Remember Me */}
           <div className="flex items-center justify-between gap-3">
-
             <label className="flex items-center gap-2 text-sm text-slate-600">
-              <input
-                type="checkbox"
-                className="h-4 w-4 accent-teal-700"
-              />
+              <input type="checkbox" className="h-4 w-4 accent-teal-700" />
               Remember me
             </label>
 
@@ -167,16 +184,13 @@ export default function SignInPage() {
             Sign In
             <FiArrowRight />
           </button>
-
         </form>
 
         {/* Divider */}
         <div className="my-7 flex items-center gap-4">
           <div className="h-px flex-1 bg-gray-200" />
 
-          <span className="text-sm text-gray-400">
-            Or continue with
-          </span>
+          <span className="text-sm text-gray-400">Or continue with</span>
 
           <div className="h-px flex-1 bg-gray-200" />
         </div>
@@ -194,9 +208,7 @@ export default function SignInPage() {
             Create Account
           </Link>
         </p>
-
       </div>
-
     </AuthLayout>
   );
 }
