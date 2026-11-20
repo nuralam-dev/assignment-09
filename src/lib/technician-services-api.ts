@@ -2,7 +2,11 @@ import "server-only";
 
 // Same-origin bridge keeps HttpOnly BetterAuth cookies working across API hosts.
 // Express still verifies every session and enforces the technician role.
-export async function forwardTechnicianServices(request: Request, method: "GET" | "POST" | "PATCH", suffix = "") {
+export async function forwardTechnicianServices(request: Request, method: "GET" | "POST" | "PATCH" | "DELETE", suffix = "") {
+  return forwardTechnicianApi(request, method, "services", suffix);
+}
+
+export async function forwardTechnicianApi(request: Request, method: "GET" | "POST" | "PATCH" | "DELETE", resource: "services" | "bookings", suffix: string) {
   const headers = { "Cache-Control": "private, no-store" };
   // Next can construct request.url with its internal hostname; the browser uses Host.
   const requestOrigin = new URL(request.url);
@@ -16,13 +20,13 @@ export async function forwardTechnicianServices(request: Request, method: "GET" 
   }
   const apiUrl = process.env.NEXT_PUBLIC_API_URL;
   if (!apiUrl) {
-    return Response.json({ success: false, message: "Services are not configured yet" }, { status: 503, headers });
+    return Response.json({ success: false, message: "FixMate API is not configured yet" }, { status: 503, headers });
   }
   try {
-    const response = await fetch(`${apiUrl.replace(/\/$/, "")}/services${suffix}`, {
+    const response = await fetch(`${apiUrl.replace(/\/$/, "")}/${resource}${suffix}`, {
       method,
       headers: { Cookie: cookie, "Content-Type": "application/json" },
-      body: method !== "GET" ? await request.text() : undefined,
+      body: method === "POST" || method === "PATCH" ? await request.text() : undefined,
       cache: "no-store",
       redirect: "error",
       signal: AbortSignal.timeout(12000),

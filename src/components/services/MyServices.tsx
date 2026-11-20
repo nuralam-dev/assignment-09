@@ -44,7 +44,10 @@ export default function MyServices() {
   return (
     <div className="space-y-4">
       <p className="text-xs text-slate-500">Editing service details requires admin approval again. Availability changes keep the current approval status.</p>
-      <ServiceList liveServices={services} onServiceUpdated={(updated) => {
+      <ServiceList liveServices={services} onServiceDeleted={(id) => {
+        setServices(current => current?.filter(service => service._id !== id) ?? null);
+        setAttempt(value => value + 1);
+      }} onServiceUpdated={(updated) => {
         setServices(current => current?.map(service => service._id === updated._id ? updated : service) ?? null);
         setAttempt(value => value + 1);
       }} />

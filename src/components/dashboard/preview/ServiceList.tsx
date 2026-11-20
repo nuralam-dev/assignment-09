@@ -23,11 +23,13 @@ export default function ServiceList({
   recent = false,
   liveServices,
   onServiceUpdated,
+  onServiceDeleted,
 }: {
   approval?: boolean;
   recent?: boolean;
   liveServices?: OwnedService[];
   onServiceUpdated?: (service: OwnedService) => void;
+  onServiceDeleted?: (id: string) => void;
 }) {
   const [status, setStatus] = useState("all");
   const [query, setQuery] = useState("");
@@ -166,7 +168,7 @@ export default function ServiceList({
                   </span>
                 </div>
                 {liveServices && onServiceUpdated ? (
-                  <TechnicianServiceActions service={liveServices.find(item => item._id === service.id)!} onUpdated={onServiceUpdated} />
+                  <TechnicianServiceActions service={liveServices.find(item => item._id === service.id)!} onUpdated={onServiceUpdated} onDeleted={onServiceDeleted} />
                 ) : (
                   <div className="flex gap-2">
                     <PreviewAction label="Edit" title="Edit service preview">

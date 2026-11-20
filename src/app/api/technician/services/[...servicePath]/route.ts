@@ -11,3 +11,15 @@ export async function PATCH(
   }
   return forwardTechnicianServices(request, "PATCH", `/${id}${action ? "/availability" : ""}`);
 }
+
+export async function DELETE(
+  request: Request,
+  { params }: { params: Promise<{ servicePath: string[] }> },
+) {
+  const { servicePath } = await params;
+  const [id] = servicePath;
+  if (servicePath.length !== 1 || !/^[a-f\d]{24}$/i.test(id)) {
+    return Response.json({ success: false, message: "Invalid service path" }, { status: 400 });
+  }
+  return forwardTechnicianServices(request, "DELETE", `/${id}`);
+}

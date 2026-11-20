@@ -2,6 +2,7 @@ import type { AuthLayoutProps } from "@/typs";
 
 import Link from "next/link";
 import { FiTool, FiCheckCircle } from "react-icons/fi";
+import Copyright from "@/components/shared/Copyright";
 
 export default function AuthLayout({
   children,
@@ -71,10 +72,7 @@ export default function AuthLayout({
           </div>
         </div>
 
-        <p className="relative z-10 text-sm text-gray-400">
-          © {new Date().getFullYear()} FixMate.
-          All rights reserved.
-        </p>
+        <Copyright className="relative z-10" />
       </div>
 
       {/* Right Section */}

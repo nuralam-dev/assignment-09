@@ -508,3 +508,99 @@ remains a preview; no Delete, Booking, Payment or Admin API was implemented.
 - No live auth/service records, env files, middleware authentication behavior,
   dependencies or collections were changed. Live MongoDB and signed-in browser
   edit/toggle flows remain unverified. Report this scope and await the next task.
+
+## Technician Delete Service and confirmation dialog (2026-11-20)
+
+This request authorizes technician-owned service deletion with booking/history
+protection and a real confirmation dialog. It supersedes prior Delete-preview
+notes for the live My Services catalogue; unrelated dashboard previews remain.
+
+- Inspected current auth middleware, service POST/GET/PATCH routes, collection
+  handles, empty bookings router, My Services/actions, dialog primitives and API
+  bridge before editing. BetterAuth config and middleware behavior are unchanged.
+- Authorized read-only live inspection found `bookings` present but empty and no
+  `payments` collection. There is no persisted booking serviceId type to verify,
+  and the current empty booking router establishes no snapshot/history behavior.
+  Do not describe either String or ObjectId as the verified live booking schema.
+- Explained this relationship limitation before implementing deletion. The route
+  supports both ObjectId and hexadecimal String serviceId references. It hard
+  deletes only unreferenced services; completed/rejected/cancelled or unknown
+  booking history also blocks deletion, rather than assuming snapshots make a
+  hard delete safe. A future requirement to remove referenced services should
+  use a separately agreed minimal soft-delete policy. No soft-delete strategy,
+  history migration or booking/payment mutation was introduced in this task.
+- Backend `DELETE /api/services/:id` uses unchanged verifyToken plus exactly
+  requireRole("technician"), validates ObjectId, and finds the service by `_id`
+  and verified `req.user.email`. Wrong owner and missing resources both return
+  404 without reading their booking/payment relationships. Submitted body/query
+  identity and role are ignored. Invalid IDs return 400; session/role denials
+  retain 401/403. Auth-service failure remains fail-closed.
+- The route checks bookings with requested, accepted or in-progress status and
+  returns 409 with exactly: "Cannot delete this service because it has active
+  bookings." It then blocks any historical booking or direct serviceId payment
+  reference with a safe 409 explaining that availability can be disabled instead.
+  Retaining every referenced booking also protects payments linked via bookingId.
+- Added only a paymentsCollection handle to existing getCollections for read-only
+  reference checks. A handle or read does not create a persisted collection.
+  No booking/payment records are deleted or updated. Any failed relationship
+  query prevents deletion and uses the existing safe JSON error handler.
+- Eligible deletion uses servicesCollection.deleteOne with both ObjectId and
+  verified owner email, checks deletedCount, and returns HTTP 200 with
+  `{ success: true, message: "Service deleted successfully" }`. A zero count
+  returns 404. Existing static GET /my ordering and other service APIs remain.
+- Reference checks followed by deleteOne are sequential, not a cross-collection
+  lock. Booking creation currently has no implementation. When it is implemented,
+  coordinate creation with deletion so concurrent writes cannot create a new
+  reference after the deletion checks; do not claim this future race is solved.
+- The existing server-only bridge now supports DELETE without forwarding a body.
+  The catch-all API route permits only a single valid service ObjectId for DELETE;
+  availability/extra path segments are rejected. Cookie forwarding, same-origin
+  mutation checks, no-store, timeout, redirect rejection and status propagation
+  remain. No browser code reads HttpOnly cookies or submits trusted ownership.
+- Added a small shadcn-style `ui/alert-dialog.tsx` built from the already installed
+  Base UI AlertDialog primitive and existing Button/theme. The live Delete button
+  now opens `DeleteServiceDialog` with the selected service title, irreversible
+  warning, distinct red Delete button and Cancel. Cancel gets initial focus;
+  keyboard/modal behavior comes from the accessible AlertDialog primitive.
+- Deletion requires explicit confirmation, uses a ref to prevent duplicate
+  requests, shows Deleting state, and disables confirm/Cancel/dismissal in flight.
+  Errors, including the exact active-booking 409, stay in the open dialog with a
+  toast and allow retry or cancellation. Success closes the dialog, removes the
+  returned service ID from My Services and refetches the authenticated list.
+  Edit and availability are disabled while that service's Delete dialog is open.
+- Installed only the explicitly requested Sonner dependency (2.0.8) and mounted
+  its Toaster beside the existing Base UI Toaster in the root layout. Delete uses
+  Sonner success/error notifications. Existing Add/Edit/Availability/auth toasts
+  still use their existing Base UI implementation; no notification migration.
+- Backend npm test passed 43/43 with HTTP auth fixtures and MongoDB driver stubs,
+  including eligible deletion, ownership in deleteOne, 401/403/404/400, all three
+  active statuses in both reference types, historical and direct-payment blocking,
+  unchanged booking/payment data, unrelated references, deletedCount, repeat calls,
+  fail-closed DB failures and all earlier POST/GET/PATCH regression tests.
+- A separate installed-real-BetterAuth harness passed 52 checks with its memory
+  auth adapter and actual Express routes/middleware plus driver fixtures. DELETE
+  checks cover signed cookies, owner/role/session denial, both active reference
+  types, history preservation, successful fixture removal and repeat-call 404.
+- Actual-source frontend fixtures passed 71 checks covering existing flows and
+  Delete open/cancel/confirmation, duplicate prevention, loading, success removal
+  and refetch, Sonner notifications, error/409 preservation and bridge restrictions.
+- Headless Chrome using the actual DeleteServiceDialog, Base UI, React, Sonner
+  and compiled project CSS passed 13 isolated browser fixture checks at 1440px and
+  390px: accessible dialog, Cancel focus/no request, no horizontal overflow, busy
+  controls, duplicate prevention, 409/retry, toast visibility, removal and no
+  uncaught exceptions. Desktop/mobile screenshots were inspected outside the repo.
+  These browser requests were mocked; this is not a live logged-in MongoDB flow.
+- Six live Next.js HTTP smoke checks passed for DELETE guest 401/no-store,
+  cross-origin 403, invalid and unsupported path 400, and unchanged existing guest
+  GET bridge/BetterAuth session behavior. No live service deletion was performed.
+- TypeScript no-emit, scoped ESLint, backend syntax and whitespace checks passed.
+  Initial full lint/build runs encountered the previously recorded use-mobile and
+  Footer errors. During this task, separate workspace edits changed use-mobile.ts,
+  Footer.tsx and added Copyright.tsx; these were inspected and preserved, not
+  authored as part of Delete Service. Final full lint passes. Final production
+  build compiles and passes TypeScript, then fails at the separate
+  Copyright.tsx:8 client-component current-time prerender error. No unrelated
+  fixes were made by this deletion implementation.
+- No real user/auth/service/booking/payment records or env values were changed.
+  All deletion writes were confined to test fixtures. Stop after reporting this
+  scope and wait for the next instruction.

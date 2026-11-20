@@ -70,7 +70,7 @@ function AccountMenu({
                 <LayoutDashboard aria-hidden="true" />
                 Dashboard
               </Menu.LinkItem>
-              <Menu.LinkItem render={<Link href="/my-profile" />} closeOnClick onClick={onNavigate} className={itemClassName}>
+              <Menu.LinkItem render={<Link href="/dashboard/profile" />} closeOnClick onClick={onNavigate} className={itemClassName}>
                 <UserRound aria-hidden="true" />
                 My Profile
               </Menu.LinkItem>

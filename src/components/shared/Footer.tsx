@@ -1,5 +1,6 @@
 
 import Link from "next/link";
+import Copyright from "./Copyright";
 
 import {
   FiTool,
@@ -199,10 +200,7 @@ export default function Footer() {
       <div className="border-t border-white/10">
         <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-4 px-5 py-6 text-center md:flex-row md:px-8">
 
-          <p className="text-sm text-gray-400">
-            © {new Date().getFullYear()} FixMate.
-            All rights reserved.
-          </p>
+          <Copyright />
 
           <p className="text-sm text-gray-400">
             Built with care for better repair services.
