@@ -6,7 +6,7 @@ export async function forwardTechnicianServices(request: Request, method: "GET" 
   return forwardTechnicianApi(request, method, "services", suffix);
 }
 
-export async function forwardTechnicianApi(request: Request, method: "GET" | "POST" | "PATCH" | "DELETE", resource: "services" | "bookings", suffix: string) {
+export async function forwardTechnicianApi(request: Request, method: "GET" | "POST" | "PATCH" | "DELETE", resource: "services" | "bookings" | "technician", suffix: string) {
   const headers = { "Cache-Control": "private, no-store" };
   // Next can construct request.url with its internal hostname; the browser uses Host.
   const requestOrigin = new URL(request.url);

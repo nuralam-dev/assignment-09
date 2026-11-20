@@ -604,3 +604,207 @@ notes for the live My Services catalogue; unrelated dashboard previews remain.
 - No real user/auth/service/booking/payment records or env values were changed.
   All deletion writes were confined to test fixtures. Stop after reporting this
   scope and wait for the next instruction.
+
+## Technician Manage Requests: Accept/Reject (2026-11-20)
+
+- This request authorizes technician booking listing and requested -> accepted or
+  rejected only. No customer booking creation/cancellation, in-progress/completed,
+  payments, Stripe or admin work is authorized by this phase.
+- Fresh read-only inspection confirmed `fixmateDB.bookings` exists with zero
+  documents. The backend booking router was empty: Customer Booking POST is
+  missing. Therefore there is no live stored booking schema to verify and no
+  customer-to-technician end-to-end flow yet. Do not invent a POST or demo records.
+  The UI follows the assignment booking field names until creation is implemented.
+- Backend GET `/api/bookings/technician` uses unchanged `verifyToken` then
+  `requireRole("technician")`, filters verified req.user.email only, includes all
+  statuses, sorts createdAt/_id descending and returns an empty array normally.
+- PATCH `/api/bookings/:id/status` accepts exactly one status field, accepted or
+  rejected, validates a 24-hex ObjectId and atomically findOneAndUpdates using
+  `_id`, verified technicianEmail and status=requested. It modifies only status
+  and updatedAt, returns the updated document, and never overwrites customer data.
+  Missing/unowned returns identical 404; an owned processed booking returns 409.
+  Existing middleware retains 401/403 and safe auth-service 503; DB errors use the
+  existing error handler. Concurrent/repeated decisions cannot both succeed.
+- During inspection, frontend booking changes appeared in the shared workspace;
+  inspected and reused them without overwriting or duplicating functionality:
+  `components/bookings/TechnicianRequests.tsx`, technician requests page, narrow
+  GET/PATCH booking bridges, and existing `forwardTechnicianApi` utility. They
+  were subsequently committed externally during this task.
+- `/dashboard/technician/requests` retains RolePage, cards, tabs and status badges,
+  uses real private API data with no sample imports, and shows service/customer/
+  phone/address/preferred date/problem/USD basePrice/status/optional request date.
+  Accept/Reject use same-origin credentials and existing Sonner. Reject uses the
+  existing AlertDialog with customer/service information and Cancel initial focus.
+  Ref guards and busy controls prevent duplicate submissions/dismissal. Only a
+  confirmed success replaces the record and refetches; actions hide afterward.
+  Conflicts trigger refresh and disable repeats; errors allow retry. Loading has
+  a timeout and cleanup; empty/auth/network/malformed responses are handled.
+- Verification: backend npm test passed 54/54 (11 new booking tests plus all 43
+  existing service/foundation tests), using HTTP session fixtures and MongoDB
+  driver stubs. Covers isolation/all statuses/sorting, acceptance/rejection,
+  unchanged fields, invalid IDs/payloads, 401/403/404/409, races and safe failures.
+- Actual React/Base UI/Sonner source bundled into a temporary browser fixture
+  passed 35 checks: required fields, credentials/payloads, dialog/Cancel focus and
+  no-request behavior, duplicate/busy controls, no premature success, status/action
+  updates/refetch, errors/conflicts/retry, loading/empty and 390px overflow checks.
+  Requests were mocked; this is not a live signed-in MongoDB workflow.
+- Nine live guest/API smoke checks passed: booking guest 401, cross-origin 403,
+  invalid bridge ID 400, protected requests-page sign-in redirect content, existing
+  private services 401 and public services 200. Full lint, TypeScript no-emit,
+  production build (25 generated pages), backend syntax and whitespace checks pass.
+- No dependencies, secrets, auth configuration, real bookings, collection/index
+  setup or unrelated features changed. Live MongoDB status persistence remains
+  unverified because no real booking was modified. Report and await instructions.
+
+## Technician Overview dashboard (2026-11-20)
+
+- This request authorizes only the technician overview API and frontend. Existing
+  auth, sidebar, Service CRUD, Booking actions, Customer/Admin pages, dependencies
+  and environment files are unchanged. Earlier preview overview notes are now
+  superseded for `/dashboard/technician`.
+- Added backend GET `/api/technician/overview` mounted through a small technician
+  router in src/app.js. It reuses unchanged verifyToken and requireRole("technician")
+  and existing getCollections, servicesCollection and bookingsCollection handles.
+  Every count/find uses verified req.user.email as technicianEmail; incoming query
+  identity/role is ignored. No new collection, index or database write is used.
+- Response is `{ success: true, message, data: { totalServices, pendingRequests,
+  activeJobs, completedJobs, recentRequests } }`. Counts use countDocuments: all
+  owned services regardless of approval/availability, requested bookings,
+  accepted/in-progress bookings and completed bookings respectively. Empty data
+  returns zeros and []. Reads are fresh per request and private/no-store; separate
+  queries are not a transactional snapshot across simultaneous database changes.
+- Recent requests include all assigned booking statuses, sorted by actual
+  createdAt descending with _id descending as a stable tie-breaker and limit(5).
+  Projection allows only _id, serviceTitle, customerName, preferredDate, status,
+  basePrice and createdAt. Missing document fields are not invented. Database
+  failures use the existing safe error handler; session/role failures retain
+  401/403 and unavailable authentication stays fail-closed with 503.
+- Frontend adds a GET-only same-origin overview bridge using the existing
+  forwardTechnicianApi utility (extended resource union with technician). Existing
+  cookie forwarding, no-store, redirect rejection and 12-second upstream timeout
+  remain. Browser code cannot read the HttpOnly cookie or submit trusted identity.
+- Technician page retains RolePage, RoleAccountOverview and PageContainer. New
+  TechnicianOverview client component removes this page's sample statistics,
+  BookingList, ServiceList and preview notice, reusing existing Card, Panel,
+  StatusBadge/Badge, Button/DashboardLink, icons, Skeleton and EmptyState components.
+  Other dashboard previews and role pages are unchanged.
+- Four cards use the live response; recent rows conditionally show existing fields
+  and format basePrice as USD and preferredDate in UTC. View All and Quick Actions
+  link to existing requests/add-service/my-services routes. Cards use one/two/four
+  columns on mobile/tablet/large desktop with FixMate teal/orange styling.
+- Fetch runs on mount or explicit retry, without polling, with same-origin
+  credentials, no-store, abort cleanup and a 15-second timeout. Response shape and
+  counts are checked before rendering. Loading, zero/empty, 401, 403, network,
+  malformed response and generic failure states finish with useful feedback/retry.
+  Quick Actions remain available while loading or on errors.
+- Verification: backend npm test passed 62/62, including 8 new overview tests and
+  all existing foundation/services/bookings regressions. HTTP auth fixtures and
+  MongoDB driver stubs test all count groups, five newest rows, projection,
+  missing fields, A/B isolation, spoofed identity, empty state, 401/403, expired
+  sessions, fail-closed auth/DB errors, read-only behavior and fresh request counts.
+- Temporary headless Chrome fixture bundled actual TechnicianOverview/shared UI
+  source and project CSS, passing 16 checks for four real response fields, booking
+  fields/USD/date, missing-field omission, links, one fetch while idle, loading,
+  empty/zero, 401/403/500/network/malformed errors and successful retry. Checked
+  1440px/768px/390px grids and no horizontal overflow; desktop/mobile screenshots
+  inspected outside the repository. Fixture API data was mocked, not live records.
+- Production-server smoke checks passed for guest overview/services/bookings GET
+  bridges (401 and private/no-store) plus protected overview sign-in redirect.
+  TypeScript no-emit, full ESLint, production build (26 generated pages), backend
+  existing syntax checks plus new route/test checks, and whitespace checks pass.
+- Authorized read-only live MongoDB inspection found fixmateDB with 1 service and
+  0 bookings. The service owner's counts were 1/0/0/0 and recentCount 0; no user
+  identities or secrets were printed. No records were inserted or changed.
+  A live signed-in technician browser/API flow and populated live recent bookings
+  remain unverified. Report actual scope/results and await the next instruction.
+
+## Home Page Our Services API integration (2026-11-20)
+
+- This request authorizes the homepage public-services section only. Inspection
+  found that this checkout's homepage rendered only Banner (hero/categories),
+  with no existing Our Services section or hardcoded home service records to
+  replace. Added a section below Banner using the existing public ServiceCard,
+  ServicesLoading and FixMate teal/orange spacing, typography and responsive grid.
+  Existing hero, categories, navbar/footer and dashboard work are preserved.
+- Verified backend src/app.js mounts the existing services router at
+  `/api/services` (the pre-existing duplicate mount is unchanged). GET `/` reads
+  the existing servicesCollection with exactly approvalStatus=approved and
+  isAvailable=true and sorts createdAt descending. No backend/API/auth/CRUD,
+  environment, dependency, database record or approval changes were made.
+- New `src/components/services/OurServices.tsx` uses a simple async Server
+  Component, a single uncached fetch with a 10-second timeout, response HTTP and
+  success/data checks, and result.data rather than the envelope. There is no
+  standalone public API utility to reuse; it follows the existing services page
+  fetch pattern and the installed Next.js fetching/Suspense guidance.
+- Existing NEXT_PUBLIC_API_URL is the API prefix, including `/api` (local
+  http://localhost:4000/api), so append only `/services`. Do not change it to a
+  bare host: existing public/private integrations depend on this convention.
+  No URL is hardcoded into the new component; configuration was not edited.
+- The backend's newest-first order is retained. An additional exact visibility
+  filter runs before slice(0, 6), never exposing pending/rejected/unavailable
+  records. Shared ServiceCard displays stored image, title, category, description,
+  USD basePrice, technicianName, serviceArea, duration/mode and existing
+  `/services/${_id}` links. View All Services points to `/services` and is available
+  in loading/empty/error states too. Existing ServiceCard is unchanged.
+- Suspense streams the existing six-card accessible skeleton while fetching.
+  Missing config, failed requests and malformed response envelopes show a safe
+  error with a normal GET retry to `/#our-services`. Empty responses show a
+  friendly no-services state, with no fake cards. No client effect, polling or
+  retry loop is used; fetch runs on the server per page request.
+- Live read-only MongoDB/API comparison confirmed fixmateDB has 3 services and
+  zero approved+available services. GET http://localhost:4000/api/services returned
+  200, success:true and data:[]; API IDs exactly matched the MongoDB query. No
+  records were inserted, approved or otherwise modified for testing.
+- Temporary actual-source fixture checks passed 16/16: result.data, max six,
+  preservation of newest-first API order, pending/rejected/unavailable exclusion
+  before limit, API prefix, one uncached fetch, shared card fields/image/USD/IDs,
+  View All, empty/private-only states, 500/success:false/malformed/network/invalid
+  JSON/missing config, retry target and accessible Suspense skeleton.
+- Headless Chrome passed 14 checks: six shared-card fixture images load, 1440px/
+  768px/390px grids use three/two/one columns without overflow, fixture empty/error/
+  loading states have no fake cards, actual production homepage shows the live
+  empty state at desktop/mobile sizes with hero/categories/footer intact, live
+  View All navigation works, existing absent-detail not-found UI and no uncaught
+  exceptions. Screenshots were inspected outside the repository. Next streaming
+  may send HTTP 200 with not-found metadata when the response has already begun.
+- Backend existing regression tests passed 62/62, including public visibility,
+  newest ordering and pending creation/visibility behavior. TypeScript no-emit,
+  full ESLint, production build (26 generated pages, homepage now partially
+  prerendered), and whitespace checks passed. No new libraries or test records.
+- Populated homepage cards and detail link IDs were tested with fixtures, not
+  live approved MongoDB documents, because none currently exist. Do not claim a
+  successful populated live service-details flow. Stop and await the next task.
+
+## Our Services empty-state investigation (2026-11-20)
+
+- Fresh read-only diagnosis confirmed the exact cause: all 3 documents in
+  fixmateDB.services have approvalStatus="pending" (String) and isAvailable=true
+  (Boolean). There are zero approved+available services. These are actual stored
+  documents, not missing submissions. They require Admin Approval before public
+  display; do not bypass approval or automatically approve new services.
+- MongoDB connect/ping succeeded. The services collection exists, frontend/backend
+  configured MongoDB URIs match (compared without printing credentials), and the
+  backend explicitly selects fixmateDB. All sampled documents (the complete 3)
+  contain the card's required title/category/image/basePrice/technicianName/
+  serviceArea fields, numeric basePrice and Date createdAt. No relevant field-name
+  or approval/availability value-type mismatch was found.
+- Reconfirmed src/app.js mounts the existing router at /api/services, public GET
+  filters approved plus available and sorts createdAt descending, while technician
+  POST deliberately sets pending/true. Configured frontend API prefix resolves
+  exactly to http://localhost:4000/api/services, without missing/doubled /api.
+- Live endpoint returned HTTP 200 with
+  { success: true, message: "Services fetched successfully", data: [] }.
+  Its returned IDs exactly matched the approved+available MongoDB query. The empty
+  response is expected business behavior, not a failed fetch or JSON-envelope bug.
+- OurServices correctly uses result.data, exact visibility filtering, slice(0,6)
+  and ServiceCard mapping. Live Home Page GET returned 200 and rendered the actual
+  Our Services empty state, View All link and existing hero; no services-fetch
+  error state was found. Re-ran the existing temporary actual-source fixture
+  harness: 16/16 checks passed for populated/empty/private-only/error/loading,
+  six-card limit/order, fields/USD/images/links, prefix and response handling.
+  Populated checks remain mocked; no live approved records were available.
+- No application-code defect was found in this investigation, so only this
+  AGENTS.md finding was appended. Existing UI, authentication, API filters,
+  frontend/backend code, env configuration and all database records remain
+  unchanged. No new tests/dependencies, fake records, approval writes or unrelated
+  fixes. Await the user's next instruction; database changes require approval.
