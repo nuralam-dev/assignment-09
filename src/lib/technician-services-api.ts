@@ -1,4 +1,5 @@
 import "server-only";
+import { getApiBaseUrl } from "@/lib/api-url";
 
 // Same-origin bridge keeps HttpOnly BetterAuth cookies working across API hosts.
 // Express still verifies every session and enforces the endpoint's required role.
@@ -18,12 +19,12 @@ export async function forwardTechnicianApi(request: Request, method: "GET" | "PO
   if (!cookie) {
     return Response.json({ success: false, message: "Authentication required" }, { status: 401, headers });
   }
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+  const apiUrl = getApiBaseUrl();
   if (!apiUrl) {
     return Response.json({ success: false, message: "FixMate API is not configured yet" }, { status: 503, headers });
   }
   try {
-    const response = await fetch(`${apiUrl.replace(/\/$/, "")}/${resource}${suffix}`, {
+    const response = await fetch(`${apiUrl}/${resource}${suffix}`, {
       method,
       headers: { Cookie: cookie, "Content-Type": "application/json" },
       body: method === "POST" || method === "PATCH" ? await request.text() : undefined,

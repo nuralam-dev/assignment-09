@@ -6,6 +6,7 @@ import { Suspense } from "react";
 import { FiArrowLeft, FiClock, FiMapPin, FiTool, FiUser } from "react-icons/fi";
 import { type Service } from "@/components/services/ServiceCard";
 import ServicesLoading from "@/components/services/ServicesLoading";
+import { getApiBaseUrl } from "@/lib/api-url";
 import BookingRequest from "@/components/bookings/BookingRequest";
 
 export const metadata: Metadata = {
@@ -22,10 +23,10 @@ const API_TIMEOUT = 10000;
 async function getService(id: string): Promise<Service | null> {
   if (!/^[a-f\d]{24}$/i.test(id)) return null;
 
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+  const apiUrl = getApiBaseUrl();
   if (!apiUrl) throw new Error("API URL is not configured");
 
-  const response = await fetch(`${apiUrl.replace(/\/$/, "")}/services/${encodeURIComponent(id)}`, {
+  const response = await fetch(`${apiUrl}/services/${encodeURIComponent(id)}`, {
     cache: "no-store",
     signal: AbortSignal.timeout(API_TIMEOUT),
   });

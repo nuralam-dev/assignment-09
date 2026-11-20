@@ -1422,3 +1422,27 @@ notes for the live My Services catalogue; unrelated dashboard previews remain.
 - Modified for this task: CustomerBookings.tsx, PayBooking.tsx,
   TechnicianRequests.tsx, backend bookings/routes.js and test/bookings.test.js,
   plus this AGENTS.md. Stop after reporting this feature and await next instruction.
+
+## Production frontend API URL fix (2026-11-21)
+
+- Supersedes the earlier requirement that NEXT_PUBLIC_API_URL must already
+  include `/api`. `src/lib/api-url.ts` accepts an HTTP(S) backend origin or the
+  same origin with `/api` and normalizes either to exactly `origin/api`. It
+  rejects invalid configuration without logging supplied values.
+- Our Services, the public list/details pages, and the existing private cookie
+  bridge share that helper. Authentication, payment logic, filtering, newest-first
+  order and the homepage six-card limit are unchanged.
+- Production diagnosis: the bare origin previously produced `/services` (404);
+  `/api/services` returned 200 with eight approved/available records. The live
+  homepage had the error state. The homepage fetch runs on the Next.js server;
+  the backend also returned the expected CORS origin. Vercel build logs showed
+  successful deployment; the sampled runtime logs did not show this caught error.
+- Local production build using the deployed backend and bare-origin setting
+  passed (38/38); SSR showed exactly the latest six real services on the homepage,
+  all eight on the listing, and a working public detail page. URL checks (10),
+  source ESLint, TypeScript and guest auth/bridge checks passed. Unscoped ESLint
+  also picked up existing generated `.vercel/output` and is not a clean run.
+- `.env`/`.env.local` were inspected with secrets redacted and are ignored and
+  untracked. No env values, backend code or database records were changed. No
+  deployment was made without explicit permission; live verification of the fix
+  remains pending redeployment.

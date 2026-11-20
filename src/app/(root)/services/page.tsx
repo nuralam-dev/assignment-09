@@ -3,6 +3,7 @@ import { Suspense } from "react";
 import { FiAlertCircle, FiTool } from "react-icons/fi";
 import ServiceCard, { type Service } from "@/components/services/ServiceCard";
 import ServicesLoading from "@/components/services/ServicesLoading";
+import { getApiBaseUrl } from "@/lib/api-url";
 
 export const metadata: Metadata = {
   title: "Repair Services | FixMate",
@@ -13,10 +14,10 @@ async function ServicesList() {
   let services: Service[];
 
   try {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+    const apiUrl = getApiBaseUrl();
     if (!apiUrl) throw new Error("API URL is not configured");
 
-    const response = await fetch(`${apiUrl.replace(/\/$/, "")}/services`, {
+    const response = await fetch(`${apiUrl}/services`, {
       cache: "no-store",
       signal: AbortSignal.timeout(10000),
     });

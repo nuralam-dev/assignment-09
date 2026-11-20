@@ -3,16 +3,16 @@ import Link from "next/link";
 import { FiAlertCircle, FiArrowRight, FiTool } from "react-icons/fi";
 import ServiceCard, { type Service } from "./ServiceCard";
 import ServicesLoading from "./ServicesLoading";
+import { getApiBaseUrl } from "@/lib/api-url";
 
 async function LatestServices() {
   let services: Service[];
 
   try {
-    // Existing configuration includes the /api prefix.
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+    const apiUrl = getApiBaseUrl();
     if (!apiUrl) throw new Error("API URL is not configured");
 
-    const response = await fetch(`${apiUrl.replace(/\/$/, "")}/services`, {
+    const response = await fetch(`${apiUrl}/services`, {
       cache: "no-store",
       signal: AbortSignal.timeout(10000),
     });
