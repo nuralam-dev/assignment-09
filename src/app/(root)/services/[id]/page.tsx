@@ -6,6 +6,7 @@ import { Suspense } from "react";
 import { FiArrowLeft, FiClock, FiMapPin, FiTool, FiUser } from "react-icons/fi";
 import { type Service } from "@/components/services/ServiceCard";
 import ServicesLoading from "@/components/services/ServicesLoading";
+import BookingRequest from "@/components/bookings/BookingRequest";
 
 export const metadata: Metadata = {
   title: "Service Details | FixMate",
@@ -124,12 +125,7 @@ async function ServiceDetail({ id }: { id: string }) {
             <p className="text-xs leading-relaxed text-slate-500">
               Final cost is confirmed by your technician after the job is assessed.
             </p>
-            <Link
-              href="/sign-in"
-              className="block rounded-lg bg-orange-500 px-4 py-3 text-center text-sm font-semibold text-white transition-colors hover:bg-orange-600 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-orange-500"
-            >
-              Book this service
-            </Link>
+            <BookingRequest serviceId={service._id} serviceTitle={service.title} />
             <Link
               href="/services"
               className="block rounded-lg border border-slate-200 bg-white px-4 py-3 text-center text-sm font-semibold text-[#092e33] hover:bg-slate-50"

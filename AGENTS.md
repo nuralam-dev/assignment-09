@@ -1163,3 +1163,81 @@ notes for the live My Services catalogue; unrelated dashboard previews remain.
 - Frontend TypeScript no-emit, full ESLint, production build (33 generated pages)
   and both repositories' whitespace checks passed. Temporary scripts/screenshots
   remain outside the repositories. Report these results and await next instruction.
+
+## Service booking authentication and creation (2026-11-20)
+
+- This request authorizes the Service Details booking/login flow and secure booking
+  creation. Supersedes earlier missing-POST/form notes. Root cause was the static
+  /sign-in link in Service Details, with no session check; Sign In always used /
+  as callback. No existing form or POST /api/bookings existed. No proxy/middleware
+  or verified BetterAuth configuration fault caused this redirect.
+- Replaced only that link with components/bookings/BookingRequest.tsx. Reuses
+  authClient.useSession: initial isPending disables the button without navigation;
+  a verified client Customer session opens the shared Dialog wrapper; guest click
+  preserves /services/:id in callbackURL; other roles receive a Customer-only
+  message, not a guest redirect. Session lookup errors allow retry, never a fake
+  guest decision. Existing BetterAuth config, cookies and backend middleware stay.
+- Sign In reads callbackURL only on submit, validates it through the small
+  lib/auth-redirect.ts helper, then passes it to existing BetterAuth signIn.email.
+  Only an exact /services/24-hex-id path is accepted; whitespace/control characters,
+  external/protocol-relative/encoded/query paths fall back to /. Normal sign-in
+  behavior stays /. Installed BetterAuth's existing redirect plugin navigates
+  after login; no alternate login, token issuer or browser storage proof added.
+- The new form requires customerPhone/address/preferredDate/problemDescription,
+  validates phone/date/lengths and posts only these plus serviceId through the
+  existing same-origin /api/customer/bookings bridge (added POST alongside GET).
+  Cookie forwarding, Origin check, no-store, timeout and redirect rejection remain.
+  Duplicate submits/dismissal are blocked while saving. Failure retains inputs,
+  gives safe 401/403/404/409/network/malformed feedback and an expired-session login
+  link. Confirmed success uses Sonner, then navigates/refreshes My Bookings.
+- Added POST /api/bookings in the existing router, using unchanged verifyToken
+  then requireRole("customer"). Rejects extra/protected fields; validates native
+  ObjectId, phone, address, problem and real non-past date-only input. Customer
+  name/email come solely from req.user; service title/image/category/price/provider
+  come from an approved+available stored service. Defaults: requested, unpaid,
+  finalAmount:null and server createdAt/updatedAt. String serviceId is canonical
+  lowercase ObjectId hex; preferredDate is a BSON Date at UTC midnight.
+- Explicit approval granted through the setup command for the unique partial index
+  on bookings {customerEmail:1,serviceId:1}, named unique_active_customer_service,
+  restricted to requested/accepted/in-progress. Added scripts/setup-booking-index.js;
+  run it from the backend directory for another deployment. No automatic index
+  mutation on startup. POST checks the required index and fails closed with 503
+  if absent; duplicate active requests return 409. No extra collection added.
+- Added withDatabaseTransaction to existing db.js. Booking creation increments
+  internal services.bookingRevision and inserts its snapshot in one transaction.
+  Service deletion now checks ownership/references and deletes within a transaction
+  on that same service, preserving prior 404/409/history rules. Conflicting
+  create/delete or availability updates retry rather than creating orphan bookings.
+  Failed/duplicate creation rolls back the service counter. This necessary
+  coordination is not a new Technician feature or a service approval change.
+- Backend npm test passed 119/119, including 12 new booking-create HTTP driver/session
+  fixture tests and all prior Customer/Technician/Admin/Service tests. New coverage:
+  trusted snapshots/defaults, both role lists, 401/403/400/404/409/503, missing index,
+  concurrent/processed duplicates, cancellation/rebooking and rollback on failure.
+  Existing service tests now require transaction sessions on reference reads.
+- Installed real BetterAuth signed-cookie/memory-adapter harness passed 15 checks:
+  signup role protection, password login/failure, service callback and normal /,
+  authenticated creation/Customer+Technician reads, duplicate 409, current-role
+  changes, tampered credentials, sign-out, expiry and unsafe callback rejection.
+  MongoDB driver was stubbed; no live auth or booking writes by this harness.
+- Browser fixture using actual components/Base UI/Sonner passed 33 checks for
+  session pending/customer/guest/roles/retry, fields/validation, safe payload,
+  duplicate/busy/error behavior, success toast/navigation, callbacks and responsive
+  dialogs at 1440/768/390px. Three further checks against the real running app
+  verified guest service button -> callback-preserving Sign In and mobile layout:
+  36 total, no uncaught exceptions. Screenshots inspected outside the repository.
+- Twelve live guest/regression HTTP checks passed for new POST 401/no-store with
+  missing/invalid cookies, cross-origin 403, existing role GET denials, public
+  Services/Details, callback Sign In and BetterAuth guest session behavior.
+- Read-only live metadata initially showed zero bookings and transaction support.
+  Approved setup created only the specified index. A later read found one booking
+  created independently of automated tests: correct requested/unpaid/null defaults,
+  String serviceId, BSON dates, matching service snapshot and current Customer
+  owner; services.bookingRevision was 1. Its stored provider account currently has
+  Admin role. Do not change roles or bypass Technician protection to show it there;
+  live signed-in Technician UI persistence remains unverified for that record.
+- No live records were inserted/cancelled/edited solely for testing. Fixture
+  persistence tests do not establish a live signed-in browser booking test. No
+  dependencies, secrets, env/auth configuration, Admin pages, Google TODO or
+  unrelated frontend features changed. Prior Customer work and external commits
+  were preserved. Report verified results and await next instruction.

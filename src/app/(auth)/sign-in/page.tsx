@@ -9,6 +9,7 @@ import AuthLayout from "@/components/auth/AuthLayout";
 import GoogleAuthButton from "@/components/auth/GoogleAuthButton";
 import { toast } from "@/components/ui/toast";
 import { signIn } from "@/lib/auth-client";
+import { serviceCallback } from "@/lib/auth-redirect";
 
 export default function SignInPage() {
   const [showPassword, setShowPassword] = useState(false);
@@ -47,7 +48,7 @@ export default function SignInPage() {
         email: formData.email, 
         password: formData.password, 
         rememberMe: true, 
-        callbackURL: "/",
+        callbackURL: serviceCallback(new URLSearchParams(window.location.search).get("callbackURL")),
       });
 
       if (error) {
@@ -65,9 +66,6 @@ export default function SignInPage() {
         description: "Signed in successfully.",
       });
 
-      console.log("Sign In Data:", {
-        email: formData.email,
-      });
     } catch {
       toast.add({
         type: "error",

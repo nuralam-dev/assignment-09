@@ -4,6 +4,7 @@ import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import { FiLoader, FiTool } from "react-icons/fi";
 import { toast } from "sonner";
+import PayBooking from "@/components/payments/PayBooking";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -153,7 +154,7 @@ function BookingCard({ booking, onUpdated, onRefresh }: {
           ))}
         </dl>
         <div className="flex flex-wrap items-center gap-2 text-sm"><span>Payment:</span><StatusBadge status={paymentLabel(booking.paymentStatus)} /></div>
-        {booking.status === "completed" && booking.paymentStatus === "unpaid" && <p className="rounded-lg bg-orange-50 p-3 text-sm text-orange-800">Payment pending. Online payments are not available yet.</p>}
+        {booking.status === "completed" && booking.paymentStatus === "unpaid" && <PayBooking bookingId={booking._id} />}
         {error && <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p>}
         <div className="flex flex-wrap gap-2">
           <Button variant="outline" onClick={() => setDetails(true)}>View Details</Button>

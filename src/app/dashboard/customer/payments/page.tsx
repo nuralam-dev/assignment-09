@@ -1,14 +1,11 @@
 import type { Metadata } from "next";
-import { FiCalendar, FiCreditCard, FiDollarSign } from "react-icons/fi";
 import RolePage from "@/components/dashboard/RolePage";
-import PaymentList from "@/components/dashboard/preview/PaymentList";
+import PaymentHistory from "@/components/payments/PaymentHistory";
 import {
   DashboardLink,
   PageContainer,
   PageHeader,
   Panel,
-  PreviewNotice,
-  StatsCard,
 } from "@/components/dashboard/preview/DashboardUI";
 
 export const metadata: Metadata = {
@@ -28,26 +25,11 @@ export default function PaymentHistoryPage() {
             </DashboardLink>
           }
         />
-        <PreviewNotice />
-        <div className="grid gap-4 sm:grid-cols-3">
-          <StatsCard
-            title="Total Paid"
-            value="৳1,800"
-            icon={<FiDollarSign />}
-            accent
-          />
-          <StatsCard title="Transactions" value="1" icon={<FiCreditCard />} />
-          <StatsCard
-            title="Latest Payment"
-            value="27 Oct"
-            icon={<FiCalendar />}
-          />
-        </div>
         <Panel
           title="Your transactions"
-          description="Sample payment amounts, references, and dates."
+          description="Your stored payment records and verified Stripe Test Mode transactions."
         >
-          <PaymentList customerOnly />
+          <PaymentHistory />
         </Panel>
       </PageContainer>
     </RolePage>

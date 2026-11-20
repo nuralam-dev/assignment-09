@@ -27,7 +27,9 @@ export type AdminBooking = {
 };
 export type AdminPayment = {
   _id: string;
+  stripeSessionId?: string;
   customerName?: string;
+  customerEmail?: string;
   serviceTitle?: string;
   technicianName?: string;
   amount?: number;
@@ -35,11 +37,14 @@ export type AdminPayment = {
   transactionId?: string;
   paymentStatus?: string;
   paidAt?: string;
+  verified?: boolean;
+  verificationSource?: string;
+  testMode?: boolean;
 };
 export type PaymentReport = {
   records: AdminPayment[];
-  verificationAvailable: false;
-  revenue: [];
+  verificationAvailable: boolean;
+  revenue: { currency: string; amount: number }[];
   dependency: string;
 };
 export type Overview = {
@@ -77,9 +82,9 @@ export function isPaymentReport(value: unknown): value is PaymentReport {
   const report = value as PaymentReport;
   return (
     isRecords(report.records) &&
-    report.verificationAvailable === false &&
+    typeof report.verificationAvailable === "boolean" &&
     Array.isArray(report.revenue) &&
-    report.revenue.length === 0 &&
+    report.revenue.every(item => item && typeof item.currency === "string" && typeof item.amount === "number" && Number.isFinite(item.amount)) &&
     typeof report.dependency === "string"
   );
 }
