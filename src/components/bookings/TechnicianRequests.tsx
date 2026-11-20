@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { FiCalendar, FiLoader, FiMapPin, FiPhone, FiTool } from "react-icons/fi";
 import { toast } from "sonner";
+import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -19,6 +20,7 @@ type Booking = {
   problemDescription: string;
   basePrice: number;
   status: string;
+  finalAmount?: number | null;
   createdAt?: string;
 };
 
@@ -35,20 +37,29 @@ function requestError(status: number, fallback: string) {
   return fallback;
 }
 
+type NextStatus = "accepted" | "rejected" | "in-progress" | "completed";
+
 function RequestCard({ booking, onUpdated, onRefresh }: {
   booking: Booking;
   onUpdated: (booking: Booking) => void;
   onRefresh: () => void;
 }) {
   const [open, setOpen] = useState(false);
-  const [pending, setPending] = useState<"accepted" | "rejected" | null>(null);
+  const [pending, setPending] = useState<NextStatus | null>(null);
+  const [finalAmount, setFinalAmount] = useState(booking.finalAmount?.toString() ?? "");
   const [error, setError] = useState("");
   const [conflict, setConflict] = useState(false);
   const submitting = useRef(false);
   const cancelButton = useRef<HTMLButtonElement | null>(null);
 
-  async function changeStatus(status: "accepted" | "rejected") {
-    if (submitting.current || booking.status !== "requested" || conflict || (status === "rejected" && !open)) return;
+  async function changeStatus(status: NextStatus) {
+    const previous = { accepted: "requested", rejected: "requested", "in-progress": "accepted", completed: "in-progress" };
+    if (submitting.current || booking.status !== previous[status] || conflict || (status === "rejected" && !open)) return;
+    const amount = Number(finalAmount);
+    if (status === "completed" && (!Number.isFinite(amount) || amount <= 0)) {
+      setError("Enter a valid positive final amount in USD.");
+      return;
+    }
     submitting.current = true;
     setPending(status);
     setError("");
@@ -57,7 +68,7 @@ function RequestCard({ booking, onUpdated, onRefresh }: {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         credentials: "same-origin",
-        body: JSON.stringify({ status }),
+        body: JSON.stringify(status === "completed" ? { status, finalAmount: amount } : { status }),
         signal: AbortSignal.timeout(15000),
       });
       const result = await response.json();
@@ -71,7 +82,7 @@ function RequestCard({ booking, onUpdated, onRefresh }: {
       }
       setOpen(false);
       onUpdated(result.data);
-      toast.success(status === "accepted" ? "Booking accepted" : "Booking rejected", { description: `${booking.serviceTitle} — ${booking.customerName}` });
+      toast.success({ accepted: "Booking accepted", rejected: "Booking rejected", "in-progress": "Repair started", completed: "Repair completed" }[status], { description: `${booking.serviceTitle} — ${booking.customerName}` });
     } catch (err) {
       const message = err instanceof Error && err.name === "Error" ? err.message : "Cannot reach FixMate right now. Please try again.";
       setError(message);
@@ -112,6 +123,17 @@ function RequestCard({ booking, onUpdated, onRefresh }: {
             </div>
           )}
         </div>
+        {booking.status === "accepted" && <Button type="button" disabled={pending !== null || conflict} aria-busy={pending === "in-progress"} onClick={() => void changeStatus("in-progress")}>
+          {pending === "in-progress" ? "Starting..." : "Start Repair"}
+        </Button>}
+        {booking.status === "in-progress" && <form className="space-y-3" onSubmit={event => { event.preventDefault(); void changeStatus("completed"); }}>
+          <label className="block space-y-2 text-sm font-medium text-[#092e33]">
+            <span>Final amount (USD)</span>
+            <Input type="number" min="0.01" step="0.01" required value={finalAmount} disabled={pending !== null || conflict} onChange={event => setFinalAmount(event.target.value)} />
+          </label>
+          <Button type="submit" disabled={pending !== null || conflict} aria-busy={pending === "completed"}>{pending === "completed" ? "Completing..." : "Complete Repair"}</Button>
+        </form>}
+        {booking.status === "completed" && <p className="text-sm font-medium text-[#092e33]">Final amount: {typeof booking.finalAmount === "number" && Number.isFinite(booking.finalAmount) ? new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(booking.finalAmount) : "Not provided"}</p>}
         <AlertDialog open={open} onOpenChange={(next) => { if (!submitting.current) setOpen(next); }}>
           <AlertDialogContent initialFocus={cancelButton}>
             <AlertDialogTitle>Reject this repair request?</AlertDialogTitle>
@@ -169,7 +191,7 @@ export default function TechnicianRequests() {
       {bookings !== null && <>
         <Tabs value={tab} onValueChange={value => setTab(String(value))}>
           <TabsList className="max-w-full overflow-x-auto" aria-label="Request status">
-            <TabsTrigger value="all">All requests</TabsTrigger><TabsTrigger value="requested">Requested</TabsTrigger><TabsTrigger value="accepted">Accepted</TabsTrigger><TabsTrigger value="rejected">Rejected</TabsTrigger>
+            <TabsTrigger value="all">All requests</TabsTrigger><TabsTrigger value="requested">Requested</TabsTrigger><TabsTrigger value="accepted">Accepted</TabsTrigger><TabsTrigger value="in-progress">In progress</TabsTrigger><TabsTrigger value="completed">Completed</TabsTrigger><TabsTrigger value="rejected">Rejected</TabsTrigger>
           </TabsList>
         </Tabs>
         {rows.length ? <div className="grid gap-4 lg:grid-cols-2">{rows.map(booking => <RequestCard key={booking._id} booking={booking} onRefresh={refresh} onUpdated={updated => {

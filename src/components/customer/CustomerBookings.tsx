@@ -154,7 +154,11 @@ function BookingCard({ booking, onUpdated, onRefresh }: {
           ))}
         </dl>
         <div className="flex flex-wrap items-center gap-2 text-sm"><span>Payment:</span><StatusBadge status={paymentLabel(booking.paymentStatus)} /></div>
-        {booking.status === "completed" && booking.paymentStatus === "unpaid" && <PayBooking bookingId={booking._id} />}
+        {booking.status === "completed" && booking.paymentStatus === "unpaid" && (
+          Number.isFinite(Number(booking.finalAmount)) && Number(booking.finalAmount) > 0
+            ? <PayBooking bookingId={booking._id} onRefresh={onRefresh} />
+            : <p className="text-sm text-orange-800">Payment will be available after your technician saves a valid final amount.</p>
+        )}
         {error && <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p>}
         <div className="flex flex-wrap gap-2">
           <Button variant="outline" onClick={() => setDetails(true)}>View Details</Button>
@@ -215,6 +219,11 @@ export default function CustomerBookings() {
     void load();
     return () => controller.abort();
   }, [attempt]);
+  useEffect(() => {
+    const refreshOnFocus = () => setAttempt(value => value + 1);
+    window.addEventListener("focus", refreshOnFocus);
+    return () => window.removeEventListener("focus", refreshOnFocus);
+  }, []);
   function refresh() {
     setLoading(true);
     setAttempt(value => value + 1);

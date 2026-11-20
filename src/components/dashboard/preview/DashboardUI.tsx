@@ -233,6 +233,7 @@ export function DashboardLink({
 }) {
   return (
     <Button
+      nativeButton={false}
       render={<Link href={href} />}
       className="h-10 w-fit gap-2 bg-[#f97316] px-4 text-white hover:bg-orange-600"
     >

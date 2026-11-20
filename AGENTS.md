@@ -1241,3 +1241,184 @@ notes for the live My Services catalogue; unrelated dashboard previews remain.
   dependencies, secrets, env/auth configuration, Admin pages, Google TODO or
   unrelated frontend features changed. Prior Customer work and external commits
   were preserved. Report verified results and await next instruction.
+
+## Stripe Test Mode setup and full payment flow (2026-11-20)
+
+- This request authorizes Stripe SDK/CLI/account setup, local environment changes,
+  payment APIs/frontend and explicitly labelled safe Test Mode fixtures. Earlier
+  missing-payment/preview notes are superseded for these endpoints/pages. Existing
+  real customer bookings/payments, BetterAuth configuration and unrelated features
+  were preserved. No live-mode payments are supported or processed by this work.
+- Stripe CLI was already installed (1.55.14). Browser device authorization completed.
+  User-requested `stripe agent setup --client codex` installed official
+  stripe@openai-curated plugin 82fd64bc at user scope; status confirmed installed.
+  Applied stripe-best-practices and its payments reference. Installed only the
+  necessary backend official stripe SDK 23.2.0 (API 2026-11-18.endive).
+- Existing backend STRIPE_SECRET_KEY was retained and securely validated with a
+  read-only Stripe balance response (livemode:false). Its historical rotation is
+  not independently verifiable; never claim verified rotation or print the value.
+  Current CLI signing secret and CLIENT_URL=http://localhost:3000 were written to
+  ignored .env without changing unrelated values; listener enforces file mode600.
+  .env.example contains placeholders only. Never copy secrets into this file.
+- scripts/listen-stripe.js starts CLI with the backend test key via environment,
+  not argv, to keep listener/API in the same test account. It buffers complete
+  output lines, captures whsec directly to .env and redacts secret output. CLI1.55
+  requires --events: subscribes checkout.session.completed and
+  checkout.session.async_payment_succeeded, forwarding to
+  localhost:4000/api/payments/webhook. Bare listen --forward-to is insufficient
+  with this installed version. Restart backend after the secret changes; existing
+  node --watch was restarted by touching app.js. Listener stayed running for tests.
+- Added config/payments.js and routes/payments/routes.js. Public POST webhook is
+  mounted with express.raw(application/json) BEFORE global express.json. SDK
+  signature verification rejects invalid signatures; live-mode events are refused.
+  Unrelated/generic CLI fixture events acknowledge 200 without booking mutations.
+  FixMate fulfillment retrieves the real Session with expanded PaymentIntent and
+  verifies test mode, complete/paid/succeeded state, booking/customer/attempt/session
+  linkage, amount received, MongoDB finalAmount and USD before any paid update.
+- POST /api/payments/create-checkout-session reuses unchanged verifyToken then
+  requireRole(customer). Accepts only bookingId, validates ObjectId/ownership and
+  completed+unpaid, and reads positive two-decimal USD finalAmount (Stripe minimum
+  $0.50). Atomic checkoutRequestId/amount/currency claims plus versioned Stripe
+  idempotency keys reuse current open sessions and safely renew expired ones.
+  Success/cancel URLs come only from configured CLIENT_URL. No client amount or
+  identity is trusted; neither return page can mark a booking paid.
+- Current API rejects payment_method_types on Checkout creation. Removed it and
+  uses Dashboard dynamic payment methods; async success is supported by webhook.
+  Explicit adaptive_pricing.enabled=false prevents conversion to local currency;
+  actual hosted Checkout displayed USD12.50. Final idempotency namespace is
+  fixmate-checkout-v2- plus stored attempt UUID; earlier rejected test payloads had
+  cached Stripe idempotency errors. Only old unpaid fixture sessions were expired.
+- User approved payment schema setup through scripts/setup-payment-indexes.js:
+  created existing planned payments area with three unique partial indexes on
+  bookingId/stripeSessionId/transactionId where verified:true. Checkout linkage
+  fields are stored on bookings. Verified payment fields extend assignment fields
+  with verified:true, verificationSource:stripe-webhook and testMode:true. One
+  MongoDB transaction inserts the payment and conditionally updates the completed
+  unpaid booking; retries/duplicates preserve one payment and consistent paid state.
+  Missing required indexes/config fail closed. No extra application collections.
+- GET /api/payments/my is current-Customer-only, owner-filtered and newest-first.
+  GET /api/payments/session/:id returns only an owned MongoDB-backed verification
+  result. GET /status exposes only availability. Existing Admin payments endpoint
+  projects real records and reports verified USD Test Mode totals; legacy/unknown
+  records/currencies never establish verification or enter the total. Overview's
+  dependency explanation was updated without unrelated Admin mutations.
+- Frontend adds narrow cookie-forwarding Customer payments/history/status/checkout/
+  session bridges using existing utility. PayBooking appears only for completed
+  unpaid bookings when payment setup is available; disables duplicate clicks and
+  restricts external redirects to HTTPS checkout.stripe.com. PaymentHistory reuses
+  existing tables/filter/loading/error/retry for Customer and Admin, showing actual
+  transactions/verification and explicit Test Mode totals. No frontend Stripe SDK.
+- Customer payment previews/fake BDT totals were removed. /payment/success requires
+  Customer role and an owned verified backend result; a URL alone shows processing.
+  /payment/cancel performs no payment mutation. Existing DashboardLink now sets
+  nativeButton=false when rendering Link, fixing Base UI's native-button warning
+  observed on the real payment pages. No unrelated redesign or auth change.
+- Backend npm test passed 131/131 (12 new payment HTTP/SDK/driver tests, all old
+  regressions): ownership/roles/validation/index/config gates, amount/currency,
+  current/expired/concurrent Checkout, real SDK signature verification, unlinked
+  events, paid fulfillment, duplicate delivery, rollback and scoped verified history.
+  Syntax checks and both repositories' whitespace checks passed. Frontend no-emit,
+  full ESLint and default Turbopack production build passed (38 generated pages).
+- Initial Turbopack sandbox worker EPERM was cached. Cache was moved reversibly
+  outside the repository and permitted default build passed. Webpack fallback
+  compiles but does not process this repo's @tailwindcss/turbopack-only CSS rule;
+  do not use that fallback to claim styling verification or add unrelated config.
+- Actual-source browser fixtures passed44 checks: safe Checkout URL/payload,
+  busy/duplicate/failure states, conditional Pay Now, history/currency/filters,
+  success URL not proof, retry and no page overflow at1440/768/390px. Used actual
+  compiled Tailwind CSS; screenshots inspected. Thirteen live guest/API smoke
+  checks passed, including existing Service/Booking APIs and protected routes.
+- REAL Test Mode flow verified with a dedicated labelled test customer and three
+  new [Stripe Test: pay/cancel/incomplete] bookings. No existing real booking or
+  payment was used/changed. Incomplete Checkout returned409; actual Stripe Session
+  amount/currency matched MongoDB (1250 cents/USD). Generic CLI trigger delivered
+  HTTP200 and was ignored for booking fulfillment. Hosted Checkout with Stripe's
+  test card produced a signed event, HTTP200, one verified USD12.50 payment and
+  booking paid; success page and My Bookings showed verified/Paid with no Pay Now.
+- Replayed the real event twice with valid local signatures: still exactly one
+  payment. Actual Customer History and Admin Transactions displayed the same
+  verified record/total. Only the dedicated fixture user's role was temporarily
+  changed for role403/Admin browser checks, then restored to Customer in finally.
+  No real account role changed. Actual Stripe Back returned /payment/cancel;
+  that fixture stayed unpaid with zero payment records and backend paid:false.
+- One labelled test customer was created; three test bookings and one verified
+  test payment remain for review. A later read-only audit no longer found the
+  fixture user by either ID or email; no test script deleted it. Its role had
+  already been restored to Customer and both real role UIs were verified before
+  that observation. Do not assume the temporary identity still exists. Credentials/cookies and test scripts/screenshots are
+  private temporary artifacts outside Git; never print their private JSON file.
+  CLI listener is intentionally left active. Key rotation history remains the
+  only externally unverified credential fact; no secret values were disclosed.
+
+## Missing Customer Pay Now button and completion pipeline (2026-11-20)
+
+- Current request authorizes only diagnosing/fixing Customer payment eligibility,
+  the missing Technician completion workflow and existing Checkout wiring. This
+  supersedes earlier Accept/Reject-only notes for the status endpoint. Preserve
+  BetterAuth, ownership middleware, existing payment verification and unrelated UI.
+- Read-only live MongoDB inspection found six bookings: two requested/unpaid/null,
+  one accepted/unpaid/null, one cancelled/unpaid/null, one labelled Stripe fixture
+  completed/paid/12.50 and one labelled Stripe fixture completed/unpaid/12.50.
+  Only the last was eligible. No inconsistent status/payment strings or numeric
+  amount mappings were observed. Nonfixture records were correctly ineligible;
+  the assigned provider for the accepted record currently has Technician role.
+- Main workflow defect: TechnicianRequests and PATCH /api/bookings/:id/status
+  supported only requested -> accepted/rejected, so a normal booking could never
+  become completed with a final amount. Added accepted -> in-progress and
+  in-progress -> completed with required finite numeric finalAmount > 0. The
+  existing atomic update filters both verified technicianEmail and exact previous
+  status. Only completion changes finalAmount; paymentStatus remains untouched.
+  Invalid fields/types, wrong owners, wrong roles, skipped/repeated/racing
+  transitions still fail. No bookings are automatically completed or backfilled.
+- Technician UI reuses Button/Input/cards/tabs. Start Repair appears only for
+  accepted; in-progress shows a required USD amount and Complete Repair. Sends
+  numeric amount only for completion, prevents duplicates, retains failed inputs,
+  and replaces/refetches only confirmed server results. Completed amount is shown.
+- CustomerBookings retains actual API fields and now requires completed AND unpaid
+  AND finite Number(finalAmount) > 0 before mounting PayBooking. Invalid completed
+  amounts get an explanatory message; paid/other statuses never get Pay Now.
+  Existing amount display, filters, cancellation and layout remain. Window focus
+  refetches fresh booking data; explicit Refresh remains available.
+- PayBooking previously hid its button after any /payments/status failure and
+  lacked a retry for that preflight. Removed that frontend visibility dependency;
+  the authoritative authenticated Checkout API still checks configuration/indexes,
+  Customer ownership, completed/unpaid and MongoDB amount before creating a Session.
+  No eligibility/security check was removed from that API. The button submits only
+  bookingId via the existing same-origin cookie bridge, retains timeout/duplicate
+  guards and Stripe-only HTTPS redirect validation, reports safe 503 errors, and
+  requests fresh bookings on 404/409. Stripe minimum remains $0.50 with USD cents;
+  a smaller positive finalAmount can complete but Checkout rejects it explicitly.
+- Existing stripe SDK, test key, webhook-secret presence, frontend origin and three
+  unique verified-payment indexes were confirmed. Live GET /api/payments/status
+  returned available:true. No dependency/env/auth/index setup changes were needed.
+- Backend native suite passed 134/134 after final changes, including three new
+  pipeline/amount/ownership/race tests and all prior booking/payment regressions.
+  Existing payment tests cover unowned Checkout denial, trusted USD amounts,
+  invalid eligibility, idempotency, signed webhooks and unchanged fulfillment.
+  Backend npm run check and explicit modified route/test syntax checks passed.
+- Actual-source browser fixtures passed 31 checks: every booking/payment state,
+  invalid/zero amounts, completed filter, USD display, authenticated ID-only payload,
+  duplicate/loading/error recovery, safe redirect, focus refresh, full Technician
+  pipeline, failed completion input preservation, 1440/390px overflow and no uncaught
+  exceptions. Fetch was mocked; these are not live signed-in MongoDB mutations.
+- Additional isolated actual Express/middleware/route test used only an in-memory
+  booking and fixture auth endpoint, then the REAL Stripe SDK/network. Verified
+  Accept -> Start -> Complete, GET /api/bookings/my returning completed/unpaid/12.50,
+  another Customer receiving 404, and a real Test Checkout Session for 1250 USD
+  cents. Two hosted Chrome checks verified checkout.stripe.com and $12.50; inspected
+  screenshot showed Sandbox and payment form. No card/payment was submitted. The
+  newly created isolated Session was expired afterward; no fake payment inserted.
+- Live backend guest GET /bookings/my, guest Checkout POST and frontend bookings
+  bridge all returned 401. A live signed-in Customer GET /my and live Technician
+  completion against MongoDB were not performed; no current credentials were
+  supplied and existing records were preserved. Actual MongoDB inspection was
+  read-only; fixture persistence/mapping tests do not prove live browser persistence.
+- Frontend TypeScript no-emit, full ESLint and both repositories' diff whitespace
+  checks passed. Prior workspace edits to DashboardUI, PaymentHistory, Stripe
+  listener/payment routes/tests and earlier AGENTS notes were preserved.
+- Production build passed with default Turbopack: compiled, TypeScript and 38/38
+  generated pages. Initial sandbox build stalled during compilation and was
+  stopped; the permitted rerun completed. No build/config workaround was committed.
+- Modified for this task: CustomerBookings.tsx, PayBooking.tsx,
+  TechnicianRequests.tsx, backend bookings/routes.js and test/bookings.test.js,
+  plus this AGENTS.md. Stop after reporting this feature and await next instruction.

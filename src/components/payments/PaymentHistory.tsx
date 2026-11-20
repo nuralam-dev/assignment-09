@@ -32,7 +32,7 @@ export default function PaymentHistory({ admin = false }: { admin?: boolean }) {
   const rows = report?.records.filter(record => status === "all" || record.paymentStatus === status) ?? [];
   if (loading) return <PageSkeleton />;
   if (error) return <div className="space-y-3"><p role="alert" className="rounded-lg bg-red-50 p-4 text-sm text-red-700">{error}</p><Button variant="outline" onClick={refresh}>Try again</Button></div>;
-  return <div className="space-y-5">
+  return <div className="min-w-0 space-y-5">
     <div className="flex flex-wrap items-center justify-between gap-3"><FilterSelect label="Payment statuses" value={status} onChange={setStatus} options={["all", "paid", "pending", "failed"]} /><Button variant="outline" onClick={refresh}>Refresh</Button></div>
     <p className="rounded-xl bg-orange-50 p-4 text-sm text-orange-800">{report?.dependency}</p>
     <p className="font-medium text-[#092e33]">Verified Test Mode total: {report?.revenue.length ? report.revenue.map(total => money(total.amount, total.currency)).join(" · ") : "$0.00"}</p>
