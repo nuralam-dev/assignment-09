@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { FiCheckCircle, FiInfo } from "react-icons/fi";
 import RolePage from "@/components/dashboard/RolePage";
 import ServiceForm from "@/components/dashboard/preview/ServiceForm";
-import { requireDashboardUser } from "@/lib/dashboard-access";
 import {
   DashboardLink,
   PageContainer,
@@ -11,11 +10,6 @@ import {
 } from "@/components/dashboard/preview/DashboardUI";
 
 export const metadata: Metadata = { title: "Add Service | FixMate" };
-
-async function TechnicianServiceForm() {
-  const user = await requireDashboardUser("technician");
-  return <ServiceForm technician={{ name: user.name, email: user.email }} />;
-}
 
 export default function AddServicePage() {
   return (
@@ -35,7 +29,7 @@ export default function AddServicePage() {
             title="Service information"
             description="Add the details customers need to understand your service."
           >
-            <TechnicianServiceForm />
+            <ServiceForm live />
           </Panel>
           <div className="space-y-6">
             <Panel title="A helpful listing">

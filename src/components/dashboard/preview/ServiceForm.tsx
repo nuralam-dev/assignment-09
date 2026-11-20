@@ -6,22 +6,32 @@ import { Button } from "@/components/ui/button";
 import { PreviewDialog } from "./DashboardUI";
 import type { PreviewService } from "./data";
 import { toast } from "@/components/ui/toast";
+import { useRouter } from "next/navigation";
+import type { OwnedService } from "./ServiceList";
 
 export default function ServiceForm({
   service,
   compact = false,
-  technician,
+  live = false,
+  ownedService,
+  onSaved,
+  onSubmittingChange,
 }: {
   service?: PreviewService;
   compact?: boolean;
-  technician?: { name: string; email: string };
+  live?: boolean;
+  ownedService?: OwnedService;
+  onSaved?: (service: OwnedService) => void;
+  onSubmittingChange?: (pending: boolean) => void;
 }) {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [savedTitle, setSavedTitle] = useState("");
   const submitting = useRef(false);
-  const isLive = Boolean(technician && !service);
+  const isEditing = Boolean(ownedService);
+  const isLive = (live || isEditing) && !service;
   const categories = isLive
     ? ["Smartphone", "Laptop & PC", "AC", "Refrigerator", "TV", "Washing Machine", "Electrical"]
     : ["Air conditioning", "Home appliances", "Electrical", "Plumbing", "Electronics"];
@@ -29,7 +39,7 @@ export default function ServiceForm({
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!isLive || !technician) {
+    if (!isLive) {
       setOpen(true);
       return;
     }
@@ -47,12 +57,11 @@ export default function ServiceForm({
 
     submitting.current = true;
     setIsSubmitting(true);
+    onSubmittingChange?.(true);
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL;
-      if (!apiUrl) throw new Error("Service submission is not configured yet.");
-
-      const response = await fetch(`${apiUrl.replace(/\/$/, "")}/services`, {
-        method: "POST",
+      const response = await fetch(`/api/technician/services${ownedService ? `/${ownedService._id}` : ""}`, {
+        method: isEditing ? "PATCH" : "POST",
+        credentials: "same-origin",
         headers: { "Content-Type": "application/json" },
         signal: AbortSignal.timeout(15000),
         body: JSON.stringify({
@@ -64,22 +73,26 @@ export default function ServiceForm({
           estimatedDuration: String(formData.get("estimatedDuration") || "").trim(),
           serviceMode: formData.get("serviceMode"),
           serviceArea: String(formData.get("serviceArea") || "").trim(),
-          // Session metadata only; Express authorization is a later phase.
-          technicianName: technician.name,
-          technicianEmail: technician.email,
         }),
       });
       const result = await response.json();
       if (!response.ok || !result.success) {
-        throw new Error(result.message || "Could not add your service. Please try again.");
+        throw new Error(result.message || "Could not save your service. Please try again.");
       }
       if (!result.data?._id || typeof result.data.title !== "string") {
         throw new Error("The server returned an unexpected response. Check before submitting again.");
       }
 
-      setSavedTitle(result.data.title);
-      form.reset();
-      toast.add({ type: "success", title: "Service added", description: "Your service is waiting for admin approval." });
+      if (isEditing) {
+        toast.add({ type: "success", title: "Service saved", description: result.message });
+        onSaved?.(result.data);
+      } else {
+        setSavedTitle(result.data.title);
+        form.reset();
+        toast.add({ type: "success", title: "Service added", description: "Your service is waiting for admin approval." });
+        router.push("/dashboard/technician/my-services");
+        router.refresh();
+      }
     } catch (err) {
       const message = err instanceof TypeError || (err instanceof Error && err.name === "TimeoutError")
         ? "Cannot reach FixMate right now. Please check your connection and try again."
@@ -90,6 +103,7 @@ export default function ServiceForm({
     } finally {
       submitting.current = false;
       setIsSubmitting(false);
+      onSubmittingChange?.(false);
     }
   }
   const field = "grid gap-2 text-sm font-medium text-slate-700";
@@ -119,7 +133,7 @@ export default function ServiceForm({
               id={compact ? "edit-service-title" : "service-title"}
               name="title"
               required={isLive}
-              defaultValue={service?.title}
+              defaultValue={ownedService?.title ?? service?.title}
               placeholder="e.g. AC repair & servicing"
               className="h-10"
             />
@@ -127,7 +141,7 @@ export default function ServiceForm({
           <div className="grid gap-5 sm:grid-cols-2">
             <label className={field}>
               Category
-              <select name="category" required={isLive} defaultValue={service?.category || ""} className={control}>
+              <select name="category" required={isLive} defaultValue={ownedService?.category ?? service?.category ?? ""} className={control}>
                 <option value="" disabled>
                   Select a category
                 </option>
@@ -145,7 +159,7 @@ export default function ServiceForm({
                 min={isLive ? "0.01" : "0"}
                 step={isLive ? "0.01" : undefined}
               placeholder={isLive ? "50" : "1800"}
-                defaultValue={service ? service.price.replace(/[^0-9]/g, "") : ""}
+                defaultValue={ownedService?.basePrice ?? (service ? service.price.replace(/[^0-9]/g, "") : "")}
                 className="h-10"
               />
             </label>
@@ -156,7 +170,7 @@ export default function ServiceForm({
               name="description"
               required={isLive}
               rows={4}
-              defaultValue={service?.description}
+              defaultValue={ownedService?.description ?? service?.description}
               placeholder="Describe the repair service and what is included..."
               className={control}
             />
@@ -167,14 +181,14 @@ export default function ServiceForm({
               <Input
                 name="estimatedDuration"
                 required={isLive}
-                defaultValue={service?.duration}
+                defaultValue={ownedService?.estimatedDuration ?? service?.duration}
                 placeholder="e.g. 1–2 hours"
                 className="h-10"
               />
             </label>
             <label className={field}>
               Service Mode
-              <select name="serviceMode" required={isLive} defaultValue={service?.mode || ""} className={control}>
+              <select name="serviceMode" required={isLive} defaultValue={ownedService?.serviceMode ?? service?.mode ?? ""} className={control}>
                 <option value="" disabled>
                   Select service mode
                 </option>
@@ -187,7 +201,7 @@ export default function ServiceForm({
             <Input
               name="serviceArea"
               required={isLive}
-              defaultValue={service?.area}
+              defaultValue={ownedService?.serviceArea ?? service?.area}
               placeholder="e.g. Dhanmondi, Dhaka"
               className="h-10"
             />
@@ -204,6 +218,7 @@ export default function ServiceForm({
               <Input
                 type={isLive ? "url" : "file"}
                 name="image"
+                defaultValue={isEditing ? ownedService?.image : undefined}
                 required={isLive}
                 pattern={isLive ? "https?://.+" : undefined}
                 placeholder={isLive ? "https://example.com/repair.jpg" : undefined}
@@ -215,14 +230,14 @@ export default function ServiceForm({
           <div className="flex flex-col gap-4 border-t pt-5 sm:flex-row sm:items-center sm:justify-between">
             <p className="flex items-center gap-2 text-xs text-slate-500">
               <FiInfo className="shrink-0" />
-              {isLive ? "Your service will be submitted for admin approval." : "Form preview only. Nothing is submitted."}
+              {isEditing ? "Changes require admin approval again. Saving unchanged details keeps the current approval." : isLive ? "Your service will be submitted for admin approval." : "Form preview only. Nothing is submitted."}
             </p>
             <Button
               type="submit"
               disabled={isSubmitting}
               className="h-10 bg-[#f97316] px-5 text-white hover:bg-orange-600"
             >
-              {isSubmitting ? "Submitting..." : isLive ? "Add Service" : service ? "Preview Changes" : "Preview Service"}
+              {isSubmitting ? "Saving..." : isEditing ? "Save Changes" : isLive ? "Add Service" : service ? "Preview Changes" : "Preview Service"}
             </Button>
           </div>
         </fieldset>

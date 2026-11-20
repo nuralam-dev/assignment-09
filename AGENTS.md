@@ -349,3 +349,162 @@ verified updates below supersede those historical details for this feature.
   records were created and no existing records changed.
 - TypeScript no-emit and scoped ESLint passed. No new libraries, auth/config,
   booking, payment or admin changes were made. Stop and await the next instruction.
+
+## Technician ownership and My Services (2026-11-20)
+
+This implementation request authorizes technician session verification, protected
+service creation, and the real My Services listing. These updates supersede the
+earlier deferred-auth and sample My Services notes for these endpoints only.
+
+- Inspected installed BetterAuth 1.7.25: this project uses signed cookie/database
+  sessions, with no JWT plugin. Reported the required cookie-forwarding integration
+  before implementation. No independent JWT issuer, new login system, dependency,
+  auth configuration, secret, or database collection was added.
+- Backend `src/middleware/verifyToken.js` forwards the cookie to the existing
+  BetterAuth `/api/auth/get-session` endpoint with `disableCookieCache=true` and
+  `disableRefresh=true`. BetterAuth verifies the cookie signature and persisted
+  session; the middleware also checks expiry and session/user ID linkage, then
+  attaches only id, name, email and current database role to `req.user`.
+- The auth origin comes only from backend `BETTER_AUTH_URL`, then `CLIENT_URL`,
+  with localhost:3000 as a development-only fallback. Production requires a
+  configured HTTPS frontend origin reachable by Express. Keep the existing
+  `/api/auth` mount. Auth responses, tokens and secrets are never returned or
+  logged by these middleware. Missing/invalid/expired sessions return 401; auth
+  service/configuration failures return a safe 503 and never authorize access.
+- Reusable `src/middleware/requireRole.js` enforces the verified role. Both POST
+  `/api/services` and GET `/api/services/my` require exactly technician; customer
+  and admin receive 403. Private responses use `Cache-Control: private, no-store`.
+- `/my` remains before `/:id`; it queries only verified `req.user.email`, ignores
+  query/body identity, includes every approval and availability state, sorts by
+  createdAt descending, and returns an empty array for an owner without services.
+- POST keeps existing business-field validation and derives technicianName/email
+  exclusively from `req.user`. Submitted ownership, role, approval, availability
+  and date cannot override server values. Defaults remain pending, available true,
+  and current createdAt. Public list/details remain unauthenticated and require
+  approved plus available. No edit/delete/availability APIs were implemented.
+- Frontend `src/app/api/technician/services/route.ts` is a narrow same-origin
+  bridge: GET forwards to backend `/services/my`, POST to `/services`. It forwards
+  cookies to the configured API prefix, disables caching and redirects, rejects
+  cross-origin POST, and does not forward Set-Cookie or auth headers/responses.
+  Browser code never reads the HttpOnly session cookie or obtains a fake JWT.
+- My Services retains `RolePage`, existing cards, filters, badges and preview
+  Edit/Delete controls. `src/components/services/MyServices.tsx` loads actual API
+  records with skeleton, safe errors, retry and an empty state. ServiceList accepts
+  optional real records and shows stored images, title, category, USD basePrice,
+  approval, availability and created date. Other dashboard previews stay samples.
+- Add Service uses the same-origin bridge with session credentials and no
+  technician identity fields. The existing RolePage guard remains. Successful
+  creation shows the existing toast, navigates to My Services and refreshes;
+  failure preserves fields and duplicate submission is still prevented.
+- Backend `npm test`: 22/22 passed using HTTP auth fixtures and MongoDB driver
+  stubs. Coverage includes trusted ownership/defaults, all own states, empty list,
+  newest sorting, technician isolation, spoofed identities, 401/403 denials,
+  expired/mismatched sessions, safe auth failures and unchanged public visibility.
+- A separate temporary harness used the installed real BetterAuth with its memory
+  adapter and the actual Express middleware/routes: 24 checks passed, including
+  signed-cookie login, blocked public role assignment, tampered credentials,
+  current-role changes, sign-out and expiry. No live auth/service records changed.
+- An actual-source temporary frontend harness passed 24 fixture checks covering
+  real card fields/images/USD/date, badges, empty/loading/error/retry behavior,
+  authenticated form payload, success navigation/refresh, failure preservation,
+  duplicate prevention, unchanged preview behavior and bridge cookie/origin/error
+  handling. These are mocked frontend checks, not a logged-in browser workflow.
+- Six live Next.js HTTP smoke checks passed: bridge guest GET/POST 401 with
+  private no-store responses, cross-origin POST 403, existing BetterAuth guest
+  get-session returning null, and both technician pages emitting sign-in redirects.
+  The bridge compares Origin with the incoming Host (and request protocol), since
+  Next can construct request.url using a different internal hostname.
+- TypeScript no-emit, scoped ESLint, backend existing syntax checks plus both new
+  middleware syntax checks, and diff whitespace checks passed. Full lint retains
+  the existing `src/hooks/use-mobile.ts:14` set-state-in-effect error. Production
+  build compiled and passed TypeScript but failed at the untouched homepage
+  `src/components/shared/Footer.tsx:203` current-time prerender error (`new Date`).
+- Deployment still needs correct frontend/API origins and backend reachability
+  to BetterAuth. A live MongoDB technician browser create/list workflow was not
+  tested. No unrelated features or existing records were changed. Stop and await
+  the next instruction after reporting this task.
+
+## Technician Edit Service and Availability Toggle (2026-11-20)
+
+This later request authorizes only technician-owned service editing and explicit
+availability updates. It supersedes the earlier preview-only Edit notes. Delete
+remains a preview; no Delete, Booking, Payment or Admin API was implemented.
+
+- Backend `PATCH /api/services/:id` reuses unchanged `verifyToken` and
+  `requireRole("technician")`. It validates ObjectId and accepts only title,
+  category, description, image, basePrice, estimatedDuration, serviceMode and
+  serviceArea. A simple shared validator in the existing routes file now serves
+  POST and PATCH; prior POST field validation, mode normalization and defaults
+  remain covered by the regression tests. PATCH rejects empty, unknown and
+  protected-field payloads with 400 rather than accepting ownership/status input.
+- Edit uses `findOneAndUpdate` with both `_id` and verified `req.user.email` in
+  the update filter. A MongoDB `$or` of editable-field `$ne` comparisons ensures
+  only actual normalized changes set approvalStatus to pending and updatedAt to
+  the current date. No-change submissions return the current owned document and
+  preserve approvalStatus and updatedAt. Missing/other-owner documents return the
+  same 404. Availability, ownership and createdAt are untouched by edits.
+- `PATCH /api/services/:id/availability` requires the same verified technician
+  role and ObjectId. It accepts exactly `{ isAvailable: boolean }`; missing,
+  non-Boolean or extra fields receive 400. Its atomic MongoDB filter also includes
+  owner email. It changes only isAvailable and updatedAt, returns the updated
+  owned record, and preserves every approval state. Both PATCH APIs retain safe
+  401/403 authentication/role denials and existing JSON/error response patterns.
+- Existing public GET list and detail filters are unchanged: only approved plus
+  available records are public. Making a pending/rejected service available
+  never approves it; editing an approved service hides it pending reapproval.
+- Extracted the existing narrow cookie-forwarding bridge into server-only
+  `src/lib/technician-services-api.ts`; the existing GET/POST route reuses it.
+  Added only PATCH handling under
+  `src/app/api/technician/services/[...servicePath]/route.ts`, with validated
+  ObjectId and optional availability suffix. Mutation requests retain same-origin
+  checking, cookie forwarding, no-store, timeout and redirect rejection. It
+  cannot forward arbitrary paths or DELETE. BetterAuth configuration is unchanged.
+- `ServiceForm` now also accepts an owned service: all eight editable fields are
+  prefilled using raw stored values, including numeric USD price and image URL.
+  It sends authenticated PATCH through the same-origin bridge, never ownership
+  or approval fields. It preserves inputs on errors, prevents duplicate submits,
+  disables fields while saving and reports the actual server result, including
+  no-change saves. Existing Add Service and standalone preview behavior remain.
+- `TechnicianServiceActions` connects each real card's Edit dialog and controlled
+  availability switch. Reused the existing dialog with optional description,
+  footer label and busy close prevention; other preview defaults remain intact.
+  Added the small `ui/switch.tsx` wrapper using the already installed Base UI
+  primitive and existing shadcn-style components/theme; no package was installed.
+- Availability sends the explicit requested Boolean and prevents duplicate
+  requests. The visible value changes only after a successful server response;
+  failure retains the previous value and shows an inline error/toast. Edit and
+  availability cannot run together for the same open service. On success,
+  MyServices replaces the record with the returned server data and refetches the
+  private list, so new approval/availability badges are displayed accurately.
+- The request mentioned Sonner, but inspection confirmed the project still uses
+  Base UI Toast and has no Sonner dependency. Optional clarification was offered;
+  the stated default was to reuse existing toast without adding another package.
+  Both new actions use the existing global toast implementation.
+- Backend `npm test`: 33/33 passed with an HTTP session-verification fixture and
+  MongoDB driver stubs. Added coverage for every editable field, invalid/protected
+  input, all no-change approval states, true/false availability, owner filters in
+  atomic updates, wrong owner/missing resource, role/session denial, invalid IDs,
+  public visibility transitions, concurrent identical edits and safe DB failures.
+  Existing POST, My Services and public list/detail regressions passed as well.
+- A separate temporary actual-BetterAuth harness passed 38 checks using its
+  memory adapter plus actual Express middleware/routes and service driver stubs.
+  This includes signed-cookie PATCH ownership/role denials, owner edit reapproval,
+  no-change approval preservation, availability preserving pending status and
+  existing login, role protection, sign-out and expiry checks.
+- A temporary actual-source frontend harness passed 45 fixture checks, including
+  prefilled editing, duplicate/busy/error handling, unchanged Add/preview behavior,
+  correct PATCH paths/credentials/Boolean payloads, controlled-switch failure
+  preservation, edit dialog wiring, server-record replacement/refetch, and bridge
+  path/origin/credential restrictions. These are mocked frontend checks, not a
+  logged-in browser workflow or proof of live MongoDB persistence.
+- Eight live Next.js HTTP smoke checks passed: both PATCH routes return guest
+  401 and cross-origin 403, invalid/unsupported paths return 400, and existing
+  private GET plus BetterAuth guest get-session behavior are preserved.
+- TypeScript no-emit, scoped ESLint for all changed frontend code, backend syntax
+  checks and diff whitespace checks passed. Full lint still fails only at the
+  existing `src/hooks/use-mobile.ts:14` set-state-in-effect error. Production build
+  compiles and passes TypeScript, then hits the existing untouched homepage
+  `Footer.tsx:203` current-time prerender error. No unrelated fixes were made.
+- No live auth/service records, env files, middleware authentication behavior,
+  dependencies or collections were changed. Live MongoDB and signed-in browser
+  edit/toggle flows remain unverified. Report this scope and await the next task.

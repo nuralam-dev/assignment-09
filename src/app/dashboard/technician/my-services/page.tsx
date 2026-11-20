@@ -1,11 +1,10 @@
 import type { Metadata } from "next";
 import RolePage from "@/components/dashboard/RolePage";
-import ServiceList from "@/components/dashboard/preview/ServiceList";
+import MyServices from "@/components/services/MyServices";
 import {
   PageContainer,
   PageHeader,
   Panel,
-  PreviewNotice,
   DashboardLink,
 } from "@/components/dashboard/preview/DashboardUI";
 
@@ -23,12 +22,11 @@ export default function Page() {
             </DashboardLink>
           }
         />
-        <PreviewNotice />
         <Panel
           title="Your service catalogue"
-          description="Preview availability, pricing, and service management controls."
+          description="Review your services, approval status, pricing, and availability."
         >
-          <ServiceList />
+          <MyServices />
         </Panel>
       </PageContainer>
     </RolePage>

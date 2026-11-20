@@ -245,14 +245,20 @@ export function PreviewDialog({
   onOpenChange,
   title,
   children,
+  description = "Frontend preview only. No records, statuses, roles, or payments will be changed.",
+  closeLabel = "Close preview",
+  busy = false,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   title: string;
   children?: ReactNode;
+  description?: string;
+  closeLabel?: string;
+  busy?: boolean;
 }) {
   return (
-    <Dialog.Root open={open} onOpenChange={onOpenChange}>
+    <Dialog.Root open={open} onOpenChange={(nextOpen) => { if (!busy) onOpenChange(nextOpen); }}>
       <Dialog.Portal>
         <Dialog.Backdrop className="fixed inset-0 z-[70] bg-[#092e33]/50 backdrop-blur-sm" />
         <Dialog.Popup className="fixed left-1/2 top-1/2 z-[71] max-h-[90svh] w-[calc(100%-2rem)] max-w-xl -translate-x-1/2 -translate-y-1/2 overflow-auto rounded-2xl bg-white p-6 shadow-xl outline-none">
@@ -260,20 +266,20 @@ export function PreviewDialog({
             {title}
           </Dialog.Title>
           <Dialog.Description className="mb-5 mt-2 text-sm leading-relaxed text-slate-500">
-            Frontend preview only. No records, statuses, roles, or payments will
-            be changed.
+            {description}
           </Dialog.Description>
           <Dialog.Close
             render={<Button variant="ghost" size="icon" />}
             className="absolute right-3 top-3"
             aria-label="Close dialog"
+            disabled={busy}
           >
             <FiX />
           </Dialog.Close>
           {children}
           <div className="mt-5 flex justify-end">
-            <Dialog.Close render={<Button variant="outline" />}>
-              Close preview
+            <Dialog.Close disabled={busy} render={<Button variant="outline" />}>
+              {closeLabel}
             </Dialog.Close>
           </div>
         </Dialog.Popup>
