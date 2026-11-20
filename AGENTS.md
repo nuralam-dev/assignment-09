@@ -1018,3 +1018,148 @@ notes for the live My Services catalogue; unrelated dashboard previews remain.
   backend; review cards are explicitly placeholders, not API-backed testimonials.
   No backend regression suite was rerun because backend code did not change.
 - Task complete; report actual results and await the next instruction.
+
+## Customer Dashboard: Phase 1 and booking/payment prerequisites (2026-11-20)
+
+- Latest user request covers the full Customer workflow but explicitly requires
+  ordered phases, verification before proceeding, and approval for required
+  database schema changes. Only Phase 1 is completed in this handoff; do not
+  describe the entire Customer dashboard, booking or payment system as complete.
+- Inspected current Customer pages, shared Profile, Service Details, Admin and
+  Technician integrations, existing auth/session and cookie bridge, backend
+  router mounts, MongoDB handles and booking middleware before implementation.
+- Fresh read-only MongoDB metadata confirmed fixmateDB.bookings exists, contains
+  zero records and has only its _id index. There is no persisted serviceId type
+  to establish. MongoDB topology supports transactions. No database records,
+  indexes, collections, environment values or auth configuration were changed.
+- Backend has no Customer booking POST/list/cancel or Stripe payment routes yet.
+  Stripe SDK is not installed; no STRIPE/payment-currency variable names were
+  found in backend env/example or inherited process env. Values were not printed.
+  Existing prices/assignment contract are USD; never silently reinterpret them.
+- Added backend GET `/api/customer/overview` in src/routes/customer/routes.js and
+  mounted it at /api/customer in existing src/app.js. It reuses verifyToken then
+  requireRole("customer"), trusted req.user.email, existing bookingsCollection and
+  private/no-store responses. Other roles are denied; supplied identity/role is
+  ignored. All reads constrain customerEmail to the verified customer.
+- Response data: totalBookings, pendingRequests=requested,
+  activeBookings=accepted/in-progress, completedBookings=completed,
+  recentBookings=latest five by createdAt/_id descending. Projection includes
+  only _id/serviceTitle/preferredDate/status/createdAt. Empty is four zeros + [].
+  Queries are fresh reads, not a transactional snapshot. Existing error handling
+  returns safe auth/DB failures; endpoint never performs a database write.
+- Replaced only Customer overview's preview records/stats/actions with
+  components/customer/CustomerOverview.tsx. Reuses RolePage, RoleAccountOverview
+  for current-session name/welcome, PageContainer, StatsCard, Panel, StatusBadge,
+  PageSkeleton, EmptyState, Button, DashboardLink and React Icons. Layout/sidebar
+  are unchanged. Overview contains no sample data, simulated actions or polling.
+- New GET-only same-origin `/api/customer/overview` bridge reuses existing
+  forwardTechnicianApi, adding customer to its resource union only. Existing
+  cookie/no-store/timeout/redirect/header handling and auth configuration remain.
+- Client validates response counts/list, shows four real stats, five recent
+  services/preferred dates/statuses, zero/empty/loading/auth/network/malformed
+  feedback, explicit retry/refresh, Browse Services and View All Bookings links.
+  Fetch has same-origin credentials, no-store, 15s timeout and abort cleanup.
+- Added backend test/customer-overview.test.js (8 tests). Full npm test passed
+  96/96, including all prior Admin approval/Service CRUD/Booking/overview tests.
+  New HTTP session/driver fixtures verify count groups, five newest, isolation,
+  spoofed identity, projections, empty, invalid/expired/mismatched session,
+  401/403/503/500, safe errors, no writes and refresh after technician changes.
+- Actual-source isolated browser fixture passed 33 checks: four response counts,
+  recent rows/date/status, real links, credentials/no-store, one initial fetch,
+  zero/empty, 401/403/500/network/JSON/shape errors, retry/manual refresh, missing
+  date, loading completion and 4/2/1 grid at 1440/768/390px without overflow.
+  Browser fetch was mocked; no live signed-in Customer workflow was tested.
+- Six live guest/regression smoke checks passed: overview backend/bridge 401 and
+  no-store, Customer page sign-in redirect content, public services 200 and private
+  Technician/Admin service bridges 401. Full lint, standalone TypeScript after
+  type regeneration, production build (32 generated pages), backend syntax checks
+  plus new route/test checks, and whitespace checks passed. An initial standalone
+  tsc run raced build's generated route types; after build it passed unchanged.
+- Phase 2 is pending explicit approval for a unique partial bookings index on
+  customerEmail/serviceId over requested/accepted/in-progress, and coordinated
+  transaction-safe booking creation versus existing service deletion. A
+  check-then-insert or in-process lock is not acceptable concurrent protection.
+  Do not enable a POST that can create orphaned/duplicate bookings. No migration
+  or index creation was run. The user's latest creation contract finalAmount:null
+  supersedes the old roadmap default when creation is implemented.
+- Phase 3–7 are not implemented in this handoff. Existing Customer bookings and
+  payments pages still contain earlier previews; Service Details booking link
+  and Technician accept/reject-only transitions remain unchanged. Shared Profile
+  already securely saves name/image through BetterAuth; phone/area/bio remain
+  unsupported and must not be represented as persisted. Stripe Test Mode config,
+  SDK, verified producer, raw webhook processing and payment unique identifiers
+  remain prerequisites. Request approval/configuration without asking for secrets
+  in chat, report this partial scope clearly, then await the next instruction.
+
+## Customer My Bookings: real listing and cancellation (2026-11-20)
+
+- This request authorizes Customer My Bookings integration and owned requested-only
+  cancellation. Earlier preview-only notes are superseded for this page. Existing
+  uncommitted Customer overview work was preserved. No Admin/Technician page,
+  BetterAuth configuration, dependency, env, collection, index or real record changed.
+- Root causes: the page rendered preview BookingList/sample field names and dialog
+  actions, with no Customer API call. The existing booking router had only
+  Technician GET/status PATCH; Customer GET, cancel and POST were absent. Live
+  read-only inspection confirmed fixmateDB.bookings has zero documents and only
+  its _id index. There is no populated live booking document/type to inspect.
+  The UI follows the existing assignment contract/Technician/Admin field names;
+  do not describe fixture fields as an observed live document schema.
+- Added GET /api/bookings/my to the existing backend booking router, using unchanged
+  verifyToken then requireRole("customer"). It filters customerEmail by verified
+  req.user.email only, ignores query identity, sorts createdAt/_id descending,
+  returns existing success/message/data JSON with [] for an empty owner, and uses
+  existing private/no-store and safe auth/database error handling.
+- Added PATCH /api/bookings/:id/cancel in the same router. Validates 24-hex ObjectId,
+  accepts no booking fields (empty object or absent body), and atomically updates
+  with _id + verified customerEmail + status=requested. Only status=cancelled and
+  updatedAt change; document/payment/amount fields are preserved. Returns updated
+  data on 200, same 404 for absent/unowned, 409 for owned non-requested, 400 for
+  invalid input, 401 for invalid/missing session, 403 for non-customer roles.
+  Technician acceptance and Customer cancellation cannot both win the same request.
+- Added narrow same-origin GET /api/customer/bookings and PATCH
+  /api/customer/bookings/[id]/cancel bridges using existing forwardTechnicianApi.
+  They forward only fixed business paths/cookies, retain no-store, Origin checks
+  on mutations, ObjectId validation, timeout and redirect rejection. Browser code
+  does not read the HttpOnly cookie or submit trusted identity/role/status.
+- Customer page retains RolePage, PageHeader/Panel and existing design. New
+  components/customer/CustomerBookings.tsx reads result.data, validates records,
+  shows image/title/technician/created/preferred/address/status/base/final/payment
+  using actual contract fields and USD. Missing/broken image, missing values,
+  invalid dates and unknown statuses have explicit fallbacks. All plus all six
+  booking status filters work locally. Existing shared Base UI Dialog wrapper
+  (PreviewDialog, with real description/Close labels) displays full owned details.
+- Requested bookings alone show Cancel Booking. Existing AlertDialog requires
+  confirmation, initially focuses Cancel, prevents dismissal/duplicate submits
+  while busy, and uses installed Sonner success/error notifications. Confirmed
+  response updates state and refetches; 404/409 disable stale actions and refetch.
+  GET uses same-origin/no-store, abort cleanup and 15s timeout. Loading terminates
+  on success/failure; safe errors support retry/sign-in. Empty state reads
+  "You haven't booked any services yet." and links Browse Services to /services.
+- Stripe SDK/Checkout/webhook/trusted payment producer remain absent. Completed
+  unpaid bookings show payment pending/unavailable; no fake Pay Now or paid write
+  is introduced. Existing stored paid status is displayed, not certified as proof.
+  POST /api/bookings is absent (live POST {} returned 404). It was not implemented
+  or replaced by this listing/cancel task; previously documented index/transaction-safe
+  creation prerequisites remain outstanding. Never claim existing POST regression
+  or end-to-end customer creation/payment was verified.
+- Backend npm test passed 107/107, including 11 new customer-bookings HTTP tests
+  with session fixtures and MongoDB driver stubs. Covers own/all states/newest/empty,
+  identity spoofing/isolation, 401/403/400/404/409/500/503, unchanged fields, repeated
+  and concurrent cancellation, and cancellation racing Technician acceptance.
+  All existing Technician requests/Customer overview/Admin/Services tests passed.
+  npm run check plus new test syntax check passed. Initial sandbox HTTP tests
+  hit listen EPERM; the permitted rerun passed without live database writes.
+- Actual-source React/Base UI/Next Image/Sonner headless browser fixture passed
+  51 checks: response mapping/credentials, fields/USD/dates, seven filters, details,
+  confirmation/Cancel focus/no mutation, busy/duplicate prevention, success/refetch,
+  error/conflict preservation and retry, empty/loading, malformed/invalid JSON,
+  missing fields/broken images, and no overflow at 1440/768/390px including details.
+  Screenshots inspected; no uncaught browser exceptions. Fetch was mocked, not
+  a live signed-in customer session or live cancellation persistence test.
+- Twelve live guest/regression HTTP smoke checks passed: backend/bridge guest
+  denials and no-store, invalid-cookie denial, cross-origin 403, invalid bridge ID
+  400, protected page redirect, Technician guest denial and public Services 200;
+  also confirmed absent booking POST 404. No real customer bookings were modified.
+- Frontend TypeScript no-emit, full ESLint, production build (33 generated pages)
+  and both repositories' whitespace checks passed. Temporary scripts/screenshots
+  remain outside the repositories. Report these results and await next instruction.

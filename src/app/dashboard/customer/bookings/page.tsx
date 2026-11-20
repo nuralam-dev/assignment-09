@@ -1,12 +1,11 @@
 import type { Metadata } from "next";
 import RolePage from "@/components/dashboard/RolePage";
-import BookingList from "@/components/dashboard/preview/BookingList";
+import CustomerBookings from "@/components/customer/CustomerBookings";
 import {
   DashboardLink,
   PageContainer,
   PageHeader,
   Panel,
-  PreviewNotice,
 } from "@/components/dashboard/preview/DashboardUI";
 
 export const metadata: Metadata = {
@@ -26,12 +25,11 @@ export default function MyBookingsPage() {
             </DashboardLink>
           }
         />
-        <PreviewNotice />
         <Panel
           title="Repair bookings"
-          description="Temporary sample bookings with status-based action previews."
+          description="Track your repair requests and manage your bookings."
         >
-          <BookingList />
+          <CustomerBookings />
         </Panel>
       </PageContainer>
     </RolePage>
