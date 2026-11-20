@@ -19,13 +19,13 @@ export const sidebarMenus: Record<UserRole, MenuItem[]> = {
   admin: [
     { title: "Overview", url: "/dashboard/admin", icon: FiGrid },
     { title: "Manage Users", url: "/dashboard/admin/users", icon: FiUsers },
-    { title: "Service Approval", url: "/dashboard/admin/services", icon: FiCheckCircle },
+    { title: "Manage Services", url: "/dashboard/admin/services", icon: FiCheckCircle },
     { title: "All Bookings", url: "/dashboard/admin/bookings", icon: FiList },
     { title: "Transactions", url: "/dashboard/admin/transactions", icon: FiDollarSign },
   ],
 };
 
 export const accountMenu: MenuItem[] = [
-  { title: "Update Profile", url: "/dashboard/profile", icon: FiUser },
+  { title: "Profile", url: "/dashboard/profile", icon: FiUser },
   { title: "Back to Home", url: "/", icon: FiHome },
 ];

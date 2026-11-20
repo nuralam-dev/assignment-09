@@ -1,152 +1,168 @@
 "use client";
-import { useState } from "react";
-import { FiEdit2, FiUser } from "react-icons/fi";
+import Image from "next/image";
+import { useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+import { FiUser } from "react-icons/fi";
+import { authClient } from "@/lib/auth-client";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Panel, PreviewDialog, StatusBadge } from "./DashboardUI";
+import { Panel, StatusBadge } from "./DashboardUI";
 
 export default function ProfileForm({
   user,
 }: {
   user: { name: string; email: string; role: string; image?: string | null };
 }) {
-  const [editing, setEditing] = useState(false);
-  const [open, setOpen] = useState(false);
+  const router = useRouter();
+  const [name, setName] = useState(user.name);
+  const [image, setImage] = useState(user.image ?? "");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const busy = useRef(false);
   const field = "grid gap-2 text-sm font-medium text-slate-700";
+  async function save(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (busy.current) return;
+    if (!name.trim() || name.trim().length > 100) {
+      setError("Enter a name between 1 and 100 characters.");
+      return;
+    }
+    if (image.trim()) {
+      try {
+        if (!["http:", "https:"].includes(new URL(image.trim()).protocol))
+          throw new Error();
+      } catch {
+        setError("Use an HTTP or HTTPS image URL.");
+        return;
+      }
+    }
+    busy.current = true;
+    setSaving(true);
+    setError("");
+    try {
+      // BetterAuth updates only the current session's user; identity/email/role are never submitted.
+      const result = await authClient.updateUser(
+        { name: name.trim(), image: image.trim() || null },
+        { signal: AbortSignal.timeout(15000) },
+      );
+      if (result.error)
+        throw new Error(
+          result.error.status === 401
+            ? "Your session has expired. Please sign in again."
+            : "Could not save your profile. Please try again.",
+        );
+      toast.success("Profile updated");
+      router.refresh();
+    } catch (err) {
+      const message =
+        err instanceof Error && err.name === "Error"
+          ? err.message
+          : "Cannot reach FixMate. Please try again.";
+      setError(message);
+      toast.error(message);
+    } finally {
+      busy.current = false;
+      setSaving(false);
+    }
+  }
   return (
     <div className="grid items-start gap-6 lg:grid-cols-[280px_minmax(0,1fr)]">
-      <Panel title="Profile photo" description="Your account at a glance">
+      <Panel title="Your account">
         <div className="flex flex-col items-center gap-4 py-4">
-          <span
-            className="flex size-24 items-center justify-center rounded-full bg-teal-50 text-3xl font-semibold text-teal-800"
-            aria-label={`${user.name} avatar`}
-          >
-            {user.name.trim().charAt(0).toUpperCase() || <FiUser />}
-          </span>
-          <div className="text-center">
-            <h2 className="font-semibold text-[#092e33]">{user.name}</h2>
-            <p className="mb-3 mt-1 break-all text-xs text-slate-500">
-              {user.email}
-            </p>
-            <StatusBadge status={user.role} />
-          </div>
-          <label className="w-full space-y-2 text-xs text-slate-500">
-            Profile Image
-            <Input
-              aria-label="Profile Image"
-              type="file"
-              accept="image/png,image/jpeg,image/webp"
-              disabled={!editing}
-              className="h-auto py-2"
+          {user.image && /^https?:\/\//.test(user.image) ? (
+            <Image
+              src={user.image}
+              alt={`${user.name} profile`}
+              width={96}
+              height={96}
+              unoptimized
+              className="size-24 rounded-full object-cover"
             />
-            <span className="block">
-              Local selection only. No upload takes place.
+          ) : (
+            <span className="flex size-24 items-center justify-center rounded-full bg-teal-50 text-3xl font-semibold text-teal-800">
+              {user.name.trim().charAt(0).toUpperCase() || <FiUser />}
             </span>
-          </label>
+          )}
+          <h2 className="font-semibold text-[#092e33]">{user.name}</h2>
+          <p className="break-all text-sm text-slate-500">{user.email}</p>
+          <StatusBadge status={user.role} />
         </div>
       </Panel>
       <Panel
         title="Personal information"
-        description="Edit fields to preview your profile form."
-        action={
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => setEditing(!editing)}
-            aria-pressed={editing}
-          >
-            <FiEdit2 />
-            {editing ? "Finish Editing" : "Edit Profile"}
-          </Button>
-        }
+        description="Save your account name and profile image."
       >
-        <form
-          className="space-y-5"
-          onSubmit={(event) => {
-            event.preventDefault();
-            setOpen(true);
-          }}
-        >
-          <div className="grid gap-5 sm:grid-cols-2">
+        <form onSubmit={save} className="space-y-5">
+          <fieldset disabled={saving} className="space-y-5">
             <label className={field}>
               Full Name
               <Input
-                defaultValue={user.name}
-                readOnly={!editing}
-                className="h-10"
+                name="name"
+                required
+                maxLength={100}
+                value={name}
+                onChange={(event) => setName(event.target.value)}
               />
+            </label>
+            <label className={field}>
+              Profile image URL
+              <Input
+                name="image"
+                type="url"
+                maxLength={2048}
+                placeholder="https://..."
+                value={image}
+                onChange={(event) => setImage(event.target.value)}
+              />
+              <span className="text-xs font-normal text-slate-500">
+                Use an existing image URL, or leave blank to remove your photo.
+              </span>
             </label>
             <label className={field}>
               Email
+              <Input value={user.email} readOnly className="bg-slate-50" />
+            </label>
+            <label className={field}>
+              Role
               <Input
-                type="email"
-                value={user.email}
+                value={user.role}
                 readOnly
-                className="h-10 bg-slate-50 text-slate-500"
+                className="bg-slate-50 capitalize"
               />
             </label>
-          </div>
-          <div className="grid gap-5 sm:grid-cols-2">
-            <label className={field}>
-              Phone
-              <Input
-                type="tel"
-                placeholder="e.g. +880 1712 345678"
-                readOnly={!editing}
-                className="h-10"
-              />
-            </label>
-            <label className={field}>
-              Area
-              <Input
-                placeholder="e.g. Dhanmondi, Dhaka"
-                readOnly={!editing}
-                className="h-10"
-              />
-            </label>
-          </div>
-          <label className={field}>
-            Bio
-            <textarea
-              rows={4}
-              readOnly={!editing}
-              placeholder="Tell us a little about yourself..."
-              className="w-full rounded-lg border border-input px-3 py-2 font-normal outline-none focus-visible:ring-2 focus-visible:ring-orange-300"
-            />
-          </label>
-          <label className={field}>
-            Role
-            <Input
-              value={user.role}
-              readOnly
-              className="h-10 bg-slate-50 capitalize text-slate-500"
-            />
-          </label>
-          <p className="text-xs leading-relaxed text-slate-500">
-            Email and role are read-only. Form changes stay in this preview and
-            are not saved to your account.
-          </p>
-          <div className="flex justify-end border-t pt-5">
+          </fieldset>
+          {error && (
+            <p
+              role="alert"
+              className="rounded-lg bg-red-50 p-3 text-sm text-red-700"
+            >
+              {error}
+            </p>
+          )}
+          <div className="flex flex-wrap justify-end gap-3 border-t pt-5">
+            <Button
+              type="button"
+              variant="outline"
+              disabled={saving}
+              onClick={() => {
+                setName(user.name);
+                setImage(user.image ?? "");
+                setError("");
+              }}
+            >
+              Reset
+            </Button>
             <Button
               type="submit"
-              disabled={!editing}
-              className="h-10 bg-[#f97316] px-5 text-white hover:bg-orange-600"
+              disabled={saving}
+              className="bg-[#f97316] text-white hover:bg-orange-600"
             >
-              Save Changes
+              {saving ? "Saving..." : "Save Changes"}
             </Button>
           </div>
         </form>
       </Panel>
-      <PreviewDialog
-        open={open}
-        onOpenChange={setOpen}
-        title="Profile changes preview"
-      >
-        <p className="rounded-xl bg-orange-50 p-4 text-sm leading-relaxed text-orange-800">
-          No profile changes have been saved. This is the UI for a future
-          profile update feature.
-        </p>
-      </PreviewDialog>
     </div>
   );
 }

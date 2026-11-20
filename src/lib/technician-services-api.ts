@@ -1,12 +1,12 @@
 import "server-only";
 
 // Same-origin bridge keeps HttpOnly BetterAuth cookies working across API hosts.
-// Express still verifies every session and enforces the technician role.
+// Express still verifies every session and enforces the endpoint's required role.
 export async function forwardTechnicianServices(request: Request, method: "GET" | "POST" | "PATCH" | "DELETE", suffix = "") {
   return forwardTechnicianApi(request, method, "services", suffix);
 }
 
-export async function forwardTechnicianApi(request: Request, method: "GET" | "POST" | "PATCH" | "DELETE", resource: "services" | "bookings" | "technician", suffix: string) {
+export async function forwardTechnicianApi(request: Request, method: "GET" | "POST" | "PATCH" | "DELETE", resource: "services" | "bookings" | "technician" | "admin", suffix: string) {
   const headers = { "Cache-Control": "private, no-store" };
   // Next can construct request.url with its internal hostname; the browser uses Host.
   const requestOrigin = new URL(request.url);

@@ -6,7 +6,6 @@ import {
   PageContainer,
   PageHeader,
   PageSkeleton,
-  PreviewNotice,
 } from "@/components/dashboard/preview/DashboardUI";
 
 export const metadata: Metadata = { title: "Update Profile | FixMate" };
@@ -16,9 +15,8 @@ async function Profile() {
     <PageContainer>
       <PageHeader
         title="Update Profile"
-        description="Review your account information and preview your profile details."
+        description="Update your name and profile image. Email and role are read-only."
       />
-      <PreviewNotice />
       <ProfileForm user={user} />
     </PageContainer>
   );

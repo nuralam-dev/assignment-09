@@ -808,3 +808,213 @@ notes for the live My Services catalogue; unrelated dashboard previews remain.
   frontend/backend code, env configuration and all database records remain
   unchanged. No new tests/dependencies, fake records, approval writes or unrelated
   fixes. Await the user's next instruction; database changes require approval.
+
+## Admin Manage Services: Approve/Reject (2026-11-20)
+
+- This request authorizes admin service listing and pending -> approved/rejected
+  review only. Preserve all existing Service CRUD, Booking, overview, sidebar,
+  BetterAuth configuration, environment, dependencies and public filters.
+- Added backend `src/routes/admin/routes.js`, mounted once at `/api/admin` in
+  existing src/app.js. GET `/api/admin/services` uses unchanged verifyToken then
+  requireRole("admin"), existing servicesCollection, includes every approval and
+  availability state, ignores submitted identity/status filters and sorts by
+  createdAt descending with _id descending as tie-breaker. Empty results are [].
+- PATCH `/api/admin/services/:id/approval` uses the same guards, validates a
+  24-hex ObjectId, and accepts exactly one approvalStatus field: approved/rejected.
+  Atomic findOneAndUpdate filters `_id` and approvalStatus=pending, sets only
+  approvalStatus and updatedAt and returns the updated document. isAvailable,
+  ownership, pricing and other fields are unchanged. Missing returns 404;
+  reviewed returns 409. Existing 401/403, safe auth-service 503, and DB error
+  handling remain. Repeated/concurrent review cannot both succeed.
+- Reused `forwardTechnicianApi` (legacy name retained to avoid unrelated renames),
+  extending only its resource union with admin and clarifying its role comment.
+  New narrow same-origin GET and PATCH bridges under `src/app/api/admin/services`
+  retain cookie forwarding, Origin checks, no-store, timeout, redirect rejection,
+  upstream status handling and no forwarding of Set-Cookie/auth headers.
+- Admin service page retains RolePage, PageContainer, header and Panel. Replaced
+  this page's preview notice/list with `components/services/AdminServices.tsx`.
+  Existing unrelated dashboard previews are unchanged. Reuses Card, StatusBadge,
+  Button, Tabs, ServicesLoading, AlertDialog, React Icons and existing Sonner.
+- Responsive live cards show stored image/title/category, technician name/email,
+  USD basePrice, service area, approval, availability and created date in UTC.
+  All/Pending/Approved/Rejected filters run locally on the authenticated list.
+  Only pending services have Approve/Reject. Reject requires explicit confirmation
+  with selected title/technician and initial Cancel focus; Cancel sends no PATCH.
+- No optimistic success: confirmed updated records replace the old cards, hide
+  actions and trigger GET refetch. Ref guards, disabled controls, spinner labels
+  and busy modal dismissal prevention stop duplicate submissions. Errors retain
+  pending state and support retry; 404/409 refresh and disable stale actions.
+  Fetch uses same-origin credentials, no-store, abort cleanup and 15-second
+  timeout; loading/empty/auth/network/malformed/error states terminate properly.
+- Public GET list/details remain unchanged: only approved+available is visible.
+  OurServices remains uncached per request and shows up to six visible records,
+  so ordinary home refresh sees current approvals. My Services remains uncached,
+  owner-filtered and shows current approval on refresh. Technician cannot review.
+- Verification: backend npm test passed 75/75, including 13 new Admin HTTP tests
+  using session fixtures and MongoDB driver stubs, plus all existing services,
+  bookings and overview regressions. Covers all states/newest/empty, 401/403,
+  expired sessions/auth failures, invalid/protected payloads, 404/409, concurrent
+  review, unchanged fields/availability and safe DB errors. Actual route fixture
+  POST -> pending -> admin approval -> public list/detail/My Services passed;
+  unavailable approval/rejection stayed hidden and another owner saw no services.
+- Actual-source React/Base UI/Next Image/Sonner browser fixture passed 43 checks:
+  fields/images/USD/date, all filters, credentials/payloads, confirmation/Cancel,
+  busy/duplicate controls, no premature success, confirmed statuses/refetch/toast,
+  401/403/409/network/malformed/error/retry, initial loading/empty, 3/2/1 columns
+  at 1440/768/390px and no overflow, including mobile dialog. No console errors
+  in the inspected final fixture tab. Browser HTTP calls were mocked.
+- Production build passed (27 generated pages), full ESLint, TypeScript no-emit,
+  backend existing syntax checks plus new admin route/test checks and whitespace
+  checks passed. Ten live production/guest smoke checks passed: guarded GET/PATCH
+  401, invalid cookie 401, cross-origin 403, invalid bridge ID 400, protected Admin
+  page sign-in redirect content and unchanged public/private services behavior.
+- Fresh read-only live inspection found 2 pending+available and 1 approved+available
+  services. API IDs matched MongoDB; live homepage contained only visible detail
+  links and public detail APIs respected visibility (200/404). No record was
+  approved, rejected, inserted or otherwise modified by this task's tests.
+- Live signed-in Admin PATCH persistence and Technician browser refresh were not
+  tested against real records. Those updates/flows were verified with driver and
+  browser fixtures, not claimed as live MongoDB writes. No collections/indexes,
+  dependencies, secrets, auth config or unrelated features changed. Await next task.
+
+## Complete Admin Dashboard (2026-11-20)
+
+- This request authorizes all Admin dashboard pages/APIs and shared profile
+  integration. Preserve prior uncommitted service-review work and unrelated
+  Customer/Technician functionality. No dependencies, env/auth configuration,
+  real records, collections, indexes or schema were added/changed.
+- Fixed backend getCollections().usersCollection to physical `user`, matching
+  the existing BetterAuth MongoDB adapter. Never recreate physical `users`.
+  Updated the booking test's handle-name whitelist accordingly; booking handlers
+  and workflows remain unchanged.
+- Extended the existing `/api/admin` router with GET `/overview`, `/users`,
+  `/bookings`, `/payments` and PATCH `/users/:id/role`. Existing GET `/services`
+  and atomic PATCH `/services/:id/approval` are reused without weakening their
+  pending-only review or public visibility rules. All endpoints use unchanged
+  verifyToken then requireRole("admin"), BetterAuth signed-cookie/database-session
+  verification, current trusted role, private/no-store and safe error handling.
+- Overview counts total users/customers/technicians/services/pending approvals/
+  bookings/active bookings/completed bookings directly in MongoDB. Active means
+  accepted or in-progress. Recent service submissions/bookings sort createdAt and
+  _id descending, limit five, with safe field projections. Empty counts are zero.
+- Users GET projects only _id/name/email/image/role/createdAt. UI searches name/
+  email and filters all three roles. Role PATCH validates ObjectId and an exact
+  customer/technician-only payload; prohibits self changes (including uppercase
+  IDs), admin promotion and demotion of existing admins. Its atomic filter permits
+  only current customer/technician roles; only role/updatedAt change. Existing
+  BetterAuth account/session relationships are preserved. Confirmation, duplicate
+  submission guard, disabled controls, Sonner feedback and refetch are wired.
+- Bookings GET is Admin-only, newest first, and projects the existing assignment
+  business fields only. UI supports search by customer/technician/service, all six
+  status filters, base/final USD amounts, stored payment status and a read-only
+  details dialog. No Admin status mutation or Customer booking creation was added.
+- Stripe Checkout, webhook verification and a trusted payment producer do not
+  exist. Payments GET reads existing records only (reading a collection handle
+  does not create it), projects payment fields, sorts paidAt/_id descending and
+  returns verificationAvailable:false, revenue:[], and a dependency message.
+  Stored paid status alone never establishes payment proof. UI shows actual
+  stored records/status/currency if present, labels them unverified/excluded from
+  revenue, supports status filtering and a useful empty state. Overview makes no
+  revenue claim; different currencies are never added together. Verified revenue
+  reporting remains dependent on a later audited payment integration.
+- Added five narrow same-origin bridges for overview/users/user-role/bookings/
+  payments using existing forwardTechnicianApi. No duplicated backend origin or
+  auth system. Existing API prefix, cookie forwarding, Origin check for PATCH,
+  no-store, upstream timeout and redirect rejection remain unchanged.
+- New components/admin contains AdminData, AdminOverview, AdminUsers,
+  AdminBookings, AdminPayments and types/formatters. AdminData centralizes bounded
+  authenticated reads, response checks, loading, safe errors, explicit retry and
+  refresh without polling. Admin pages retain RolePage, PageContainer, shared
+  cards/tables/dialogs and layout. No preview data imports remain in Admin pages.
+- Existing AdminServices adds local title/category/technician search alongside
+  prior approval filters and real Approve/Reject controls. Existing shared Sidebar
+  keeps its responsive/active role navigation; labels now read Manage Services
+  and Profile. No Customer/Technician links are added to the Admin menu.
+- Shared `/dashboard/profile` now saves name and optional HTTP(S) image URL via
+  the existing BetterAuth authClient.updateUser API. It uses the current session,
+  never submits another user ID/email/role, prevents duplicate submits, disables
+  fields while saving, refreshes the shell, and provides reset/error/success
+  feedback. Email/role remain read-only and role input:false remains unchanged.
+  Phone/area/bio are not configured BetterAuth fields and no existing persistence
+  API supports them, so no schema expansion or nonfunctional inputs were added.
+- Backend npm test passed 88/88: 13 new Admin tests plus 75 prior regressions,
+  including existing public visibility/review races/technician ownership. New
+  fixture coverage includes correct counts/recent-five ordering/empty states,
+  safe projections, singular user collection, role round trips and denials,
+  read-only bookings/payments, mixed currencies, unavailable verification,
+  auth/DB errors and no privileged DB access before authorization. Fixed a
+  synchronous cursor-error path that could leave count promises unhandled.
+- Temporary actual-source React/Base UI/Sonner browser fixtures passed 68 checks:
+  overview fields/links, user search/filter/confirmation/cancel/update/refetch,
+  booking search/filter/USD/details, service search/approval, payment filters/
+  currency/exclusion, empty/loading/malformed/401/403/500/network/retry, profile
+  safe payload/session error/reset, no uncaught exceptions and no page overflow
+  at 1440/768/390px for all six screens. Desktop/mobile screenshots inspected.
+  Fixture fetch/auth/router/image adapters were mocked; this is not a live signed-in
+  Admin browser persistence test. Mobile tables use existing horizontal scrolling.
+- Installed real BetterAuth with its memory adapter passed 10 additional checks:
+  signed-session profile save/image removal, blocked signup admin assignment,
+  blocked role/email edits, ignored alternate identity, guest/tampered-cookie
+  denial, and current user/profile readback. No live auth records were written.
+- Actual index.js startup on an isolated test port connected/pinged MongoDB.
+  Twenty-four live production/guest smoke checks passed: all Admin GET bridges/
+  backend denials, guest PATCH and cross-origin denial, invalid cookie, all six
+  protected pages, unchanged public visibility and guest profile-update denial.
+  Backend test process was stopped afterward. No successful live mutations tested.
+- Read-only MongoDB inspection confirmed fixmateDB, physical user and existing
+  services/bookings, 3 users, 3 services, zero bookings and no payments collection.
+  At that snapshot roles were 2 admins/1 technician; services were 2 pending/1
+  approved. A later public API smoke returned 3 approved+available services;
+  stored data changed independently during the session. These are observations,
+  not fixed statistics or records modified by this task. No identities printed.
+- Full frontend ESLint, TypeScript no-emit, production build (31 generated pages),
+  backend syntax checks including Admin route/test, and diff whitespace checks
+  passed. Temporary fixture/audit scripts and screenshots are outside the repo.
+- Remaining dependencies: Customer booking creation and the rest of unfinished
+  booking/payment workflows are not implemented by this Admin task. Populated
+  live bookings/transactions and live signed-in Admin mutations remain unverified.
+  Report actual results and await the next instruction.
+
+## Homepage Why Choose Us and Customer Reviews (2026-11-20)
+
+- This request authorizes two separate homepage UI sections only. Inspected the
+  existing homepage, shared Card primitives, component tree, backend route files
+  and collection references, and installed Next.js Server/Client Component guide.
+  No existing WhyChooseUs/CustomerReviews component or working reviews API/data
+  integration was found. No live database review collection inspection was needed
+  or performed; no review collection/API/submission system was created.
+- Added src/components/home/WhyChooseUs.tsx with the requested heading/subtitle
+  and all six supplied feature titles/descriptions. Uses existing shadcn Card/
+  CardContent, React Icons, FixMate teal/orange, subtle color hover effects and
+  reduced-motion support. Cards keep consistent heights via auto-rows-fr.
+- Added src/components/home/CustomerReviews.tsx with the requested heading and
+  subtitle and three clearly disclosed development-preview placeholders. Each
+  card is labelled Preview placeholder, uses a generic Sample customer label and
+  SC initials, five unfilled decorative star icons with Not rated, instructional
+  placeholder text and an explicitly labelled example repair service. No genuine
+  customer identity, numeric rating, testimonial endorsement or date is invented.
+  Real reviews remain dependent on a later verified review system.
+- Both components are Server Components without use client, effects, additional
+  fetches, dependencies or unnecessary interactive controls. Each reuses the
+  existing Card components. Responsive grids use one column below md, two from
+  md, and three from xl, matching existing homepage services breakpoints.
+- Modified only src/app/(root)/page.tsx to render Banner -> OurServices ->
+  WhyChooseUs -> CustomerReviews, plus this AGENTS.md. Existing hero/categories,
+  navbar/footer, OurServices implementation/API calls, auth, dashboard, backend,
+  environment and database records are unchanged by this task. Prior uncommitted
+  Admin work was preserved.
+- Verification passed: TypeScript no-emit, full ESLint, production build (31
+  generated pages), and git diff --check. No packages were installed.
+- Headless Chrome against the actual production homepage passed 35 checks:
+  requested headings, six feature cards/icons, three disclosed review placeholders,
+  initials/star icons/unrated labels/no fabricated dates, existing hero/navbar/
+  footer, section order, equal card heights and grids at 390/768/1024/1440px,
+  no horizontal overflow and no uncaught JavaScript exceptions. Desktop/mobile
+  screenshots were inspected outside the repo. Temporary browser test server
+  was stopped; existing development/backend processes were not stopped.
+- Live read-only GET /api/services returned three approved+available records;
+  homepage service detail-link IDs matched the first six visible API records
+  exactly, with no services-fetch error. These services came from the existing
+  backend; review cards are explicitly placeholders, not API-backed testimonials.
+  No backend regression suite was rerun because backend code did not change.
+- Task complete; report actual results and await the next instruction.

@@ -1,11 +1,10 @@
 import type { Metadata } from "next";
 import RolePage from "@/components/dashboard/RolePage";
-import BookingList from "@/components/dashboard/preview/BookingList";
+import AdminBookings from "@/components/admin/AdminBookings";
 import {
   PageContainer,
   PageHeader,
   Panel,
-  PreviewNotice,
 } from "@/components/dashboard/preview/DashboardUI";
 
 export const metadata: Metadata = { title: "All Bookings | FixMate" };
@@ -15,14 +14,10 @@ export default function Page() {
       <PageContainer>
         <PageHeader
           title="All Bookings"
-          description="Review service requests, booking progress, and payment statuses."
+          description="Monitor customer repair requests and inspect booking details."
         />
-        <PreviewNotice />
-        <Panel
-          title="Platform bookings"
-          description="Search and filter the sample booking workspace."
-        >
-          <BookingList mode="admin" />
+        <Panel title="All Bookings">
+          <AdminBookings />
         </Panel>
       </PageContainer>
     </RolePage>
