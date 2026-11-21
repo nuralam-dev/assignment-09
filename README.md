@@ -112,16 +112,30 @@ npm run dev
 Open http://localhost:3000.
 If your backend does not define npm run dev, use the start script specified in its package.json. Check MongoDB connectivity and local environment settings before testing authenticated routes.
 
-💳 Stripe Test Payment
-FixMate uses Stripe Test Mode for demo payments. For a standard successful card payment test in Stripe's sandbox:
-Field	Test value
-Card number	4242 4242 4242 4242
-Expiration	Any valid future date
-CVC	Any three digits
-Cardholder name	Test Customer
+💳 Stripe Sandbox Test Payment
+FixMate uses Stripe Sandbox (Test Mode) for demonstration and payment testing. No real money is charged when using the test environment and Stripe test card details below.
+Test Card Information
+Field	Details
+Payment Mode	Stripe Sandbox
+Card Number	4242 4242 4242 4242
+Expiry	12/30
+CVC	123
+Name on Card	Test Customer
 
 
-A successful checkout should be confirmed server-side, the related booking should become paid, and the payment should appear in the applicable history/transaction views. The app must prevent duplicate payments for the same booking.
+Note: The expiration date shown is an example for testing. If it is no longer in the future at the time of testing, use another future expiration date accepted by Stripe Test Mode. These are public test card values, not a real payment card or secret keys.
+
+How to Test a Payment
+1. Sign in using a Customer test account.
+2. Open My Bookings and find a booking with Completed status, Unpaid payment status, and a positive final amount set by the Technician.
+3. Select Pay Now to open Stripe Checkout.
+4. Choose Card and enter the sandbox card details from the table above.
+5. Confirm the payment in Stripe Checkout.
+6. Return to FixMate and verify the booking displays Paid after server-side confirmation.
+7. Check the transaction in Customer Payment History and Admin Transactions.
+Expected safeguards: Only the booking owner can pay; amounts are determined by the backend; successful payments are verified server-side; the same booking cannot be charged twice. A successful Stripe checkout should not be treated as proof of successful application-side recording until verified.
+
+Never include STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, or real customer payment credentials in a public README.
 🔐 Roles & Security
 - Private API routes require valid authentication and the appropriate role.
 - Customers should access only their own bookings and payment records.
