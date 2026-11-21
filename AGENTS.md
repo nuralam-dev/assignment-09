@@ -1723,3 +1723,89 @@ notes for the live My Services catalogue; unrelated dashboard previews remain.
   names/durations, connecting-line scale from 0 to 1, native Space/Enter activation,
   one roving tab stop, reduced-motion initial reload (no observer/hiding or panel
   animation) and no exceptions/console errors: 67 browser checks across both runs.
+
+## MongoDB initial connection failure and BetterAuth recovery (2026-11-21)
+
+- User authorizes only MongoDB/BetterAuth production-error diagnosis and fixes.
+  Read these instructions, installed Next server/component/environment guides,
+  actual MongoDB 7.9 driver connection/operation code and BetterAuth adapter first.
+  Original frontend src/lib/auth.ts created one module-level MongoClient and
+  immediately constructed BetterAuth with client.db("fixmateDB"), relying on lazy
+  connection. There were no frontend close(), cleanup or per-request constructors.
+  Backend owns a separate client and closes on startup failure/server error or
+  graceful process shutdown; no backend file was changed by this task.
+- Read-only production Vercel logs confirmed initial server selection timeout
+  (30000ms), ReplicaSetNoPrimary, commonWireVersion:0 and subsequent index/session
+  MongoTopologyClosedError/FAILED_TO_GET_SESSION in bom1. The timeout occurred
+  during BetterAuth adapter field-index setup on the first lazy connection;
+  concurrent/subsequent adapter operations then used the closed topology.
+  The driver itself closes topology after initial connect failure. Its automatic
+  operation connection only runs when topology is absent, so the retained closed
+  topology can poison later requests. This is distinct from an application call
+  to client.close(). Never remove indexes to address these network errors.
+- Added server-only src/lib/mongodb.ts: one global client/pool per server process,
+  shared in-flight explicit connect(), and exact fixmateDB selection. Successful
+  connect calls reuse the pool; failed/successful in-flight promises are cleared.
+  The next request can explicitly reconnect a failed initial topology. No loop,
+  timeout increase, TLS bypass, request cleanup or cached rejected promise. There
+  is no connection or index operation during module import/build collection.
+- src/lib/auth.ts now exports getAuth() and the Auth type. It awaits the shared
+  connection before initializing BetterAuth and reuses the auth instance. Auth
+  GET/POST handler and database-backed dashboard guard both use getAuth(); client
+  inference imports Auth as a type only. Email/password, public role input:false,
+  database sessions, current-role guards, React request memoization and Suspense
+  remain. Connection errors propagate rather than pretending a user is signed out.
+- Securely compared local and pulled Vercel Production env: MongoDB URI, auth
+  origin and secret matched. Values were not printed or changed. Existing URI is
+  a valid standard mongodb:// three-host replica-set URI, TLS enabled, certificate
+  validation enabled, authSource admin, directConnection false. SRV lookup is not
+  applicable to this URI. Its default database is test, but frontend and backend
+  explicitly select fixmateDB; do not change collections or introduce fixMateDB.
+- Outside the network sandbox, all three hosts resolved; real Atlas connect/ping
+  succeeded with writable primary. Existing auth indexes were listed read-only;
+  eight concurrent nonexistent-session reads passed. Atlas reachability from this
+  machine does not establish Vercel reachability at the incident time. Exact cause
+  of the FIRST network timeout (IP access rule, transient network, cluster event)
+  cannot be proven from logs containing collapsed ServerDescription objects.
+  Atlas administrative configuration/history was unavailable; do not assert an
+  IP allowlist error as confirmed. Atlas Project Security > Network Access > IP
+  Access List must admit the actual Vercel outbound IP/CIDR; Database > Clusters
+  must be active/healthy. Do not weaken TLS or enable universal network access.
+- Temporary actual-source regression harness passed113 assertions: shared attempt,
+  failed-connect gating, next-request recovery, HMR/client/auth reuse, exact DB,
+  real BetterAuth memory-adapter signup/password login/get-session/sign-out for
+  all three roles, public role protection, invalid password/tampered cookie,
+  actual dashboard/profile/bookings guards and role redirects. It wrote only
+  in-memory fixture identities, not live users or sessions.
+- A separate installed-real-driver fault-injection test reproduced the initial
+  failure followed by raw-query MongoTopologyClosedError. The actual new helper
+  reconnected the SAME client to real Atlas, passed ping and eight concurrent
+  session reads without another topology error. Only this test's isolated client
+  was closed at test completion; runtime shared clients are never closed.
+- Live local and unchanged deployed production guest get-session returned200/null;
+  all six protected dashboard/role/bookings/profile routes emitted guest sign-in
+  redirects. Six parallel correctly signed but nonexistent session tokens per
+  origin returned200/null, exercising MongoDB session lookup without borrowing
+  user cookies. Nonexistent-account sign-in returned401/INVALID_EMAIL_OR_PASSWORD
+  for both origins. No diagnostic signup or live business/auth record was created.
+- Local post-change logs contained no MongoDB selection/topology/session errors.
+  The OLD production deployment still logged some closed-topology errors for
+  other requests while diagnostic session requests succeeded. HTTP200/guest checks
+  do not establish a healthy signed-in production dashboard. No deployment or
+  Vercel/Atlas configuration mutation was performed. Real three-role login/logout,
+  rendered signed-in dashboards/bookings/profile and post-deploy logs still need
+  live verification; do not claim production is fixed before that verification.
+- TypeScript no-emit, full npx eslint src and diff whitespace checks passed.
+  Default Turbopack production build passed40/40 generated pages. Initial sandbox
+  port-denial errors were cached; moving only generated .next/cache/turbopack to
+  the temporary diagnostics directory and rerunning outside the sandbox fixed
+  build verification, with no config changes or Webpack fallback.
+- The actual compiled production build on local port3100 passed15 HTTP checks:
+  six protected guest page redirects, six parallel signed nonexistent-session
+  lookups against real Atlas, nonexistent-login401, untrusted-origin403, and zero
+  MongoDB selection/topology/session errors in its log. This verifies build runtime
+  behavior without claiming real signed-in live dashboard rendering.
+- Test scripts and diagnostics are under /tmp/fixmate-mongo-diagnosis, outside
+  Git. The private pulled env was mode600 during comparison and deleted afterward.
+  No Stripe/booking logic, dependency, collection/index definition, existing record
+  or production environment changed.

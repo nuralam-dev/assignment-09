@@ -3,12 +3,13 @@ import "server-only";
 import { cache } from "react";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { auth } from "@/lib/auth";
+import { getAuth } from "@/lib/auth";
 import { isUserRole } from "@/lib/dashboard-roles";
 import type { UserRole } from "@/typs";
 
 // Share the database-backed session read within one server render only.
 const getDashboardSession = cache(async () => {
+  const auth = await getAuth();
   return auth.api.getSession({
     headers: await headers(),
     query: { disableCookieCache: true },
