@@ -79,7 +79,7 @@ export default function SignUpPage() {
     // TODO: Implement BetterAuth Sign Up here.
 
     try {
-      const { data, error } = await signUp.email({
+      const { error } = await signUp.email({
         name: name.trim(),
         email: email.trim(),
         password: password,
@@ -101,8 +101,6 @@ export default function SignUpPage() {
         title: "Success",
         description: "Account created successfully.",
       });
-
-      console.log("Sign Up Success:", data);
 
       // Redirect only after successful sign up
       router.push("/");

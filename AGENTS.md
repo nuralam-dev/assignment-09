@@ -1506,3 +1506,152 @@ notes for the live My Services catalogue; unrelated dashboard previews remain.
   history data/query inclusion was verified; Customer/Admin browser screens were
   not independently exercised with user credentials. No fake records or second
   charge, unrelated data changes, dependency installs or auth changes were made.
+
+## Technician Payment History (2026-11-21)
+
+- Current request authorizes this additional Technician read-only payment feature;
+  existing Stripe Checkout/webhook/fulfillment and Customer/Admin history remain.
+- GET /api/payments/technician is registered before the Customer-only router gate
+  and uses unchanged verifyToken then requireRole("technician"). It derives owner
+  email only from req.user, queries the existing payments collection for that
+  owner plus verified:true/paymentStatus:paid/USD, projects the existing safe
+  fields and sorts paidAt descending with _id descending as a tie-breaker.
+- The existing verifiedPayment predicate additionally excludes unknown sources,
+  non-Test Mode data, invalid amounts and malformed Stripe identifiers. Both
+  stripe-webhook and stripe-api verified sources are supported. paymentReport
+  supplies the same cents-based USD total; the response adds totalPaidAmount and
+  paidJobCount. Existing unique verified-booking indexes give one record per paid
+  job. No booking finalAmount is counted as revenue and no Stripe request/write,
+  payment mutation, payout, collection/index or auth change was introduced.
+- Added /dashboard/technician/payments behind the existing RolePage guard, the
+  Technician Sidebar Payment History item, and a narrow same-origin GET bridge
+  at /api/technician/payments forwarding cookies to /api/payments/technician.
+  Frontend never submits technicianEmail; the bridge retains private/no-store.
+- Shared PaymentHistory accepts an optional Technician mode. It displays real API
+  total USD/paid-job count and a table of service/customer/amount/currency/status/
+  transaction/date, with existing loading, empty, error and retry states. Customer
+  and Admin modes keep their existing endpoints/columns/filter/verification UI.
+  Used ordinary Card primitives for real summary data because preview StatsCard
+  has a hardcoded Sample preview caption. Payments are described as customer
+  payments for completed repairs, explicitly not bank payouts; Test Mode note stays.
+- Native backend tests147/147 passed (four new Technician tests): missing/invalid/
+  expired401, Customer/Admin403 before DB access, separate Technicians and spoofed
+  email isolation, newest sorting, strict verified-state/currency/source filtering,
+  exact decimal total/job count, unpaid-booking exclusion, empty zeros, safe errors,
+  no writes and history available without Stripe credentials. Existing Customer/
+  Admin history, Checkout/webhook and payment-recovery regression tests all pass.
+- Headless Chrome actual-component fixtures passed38 checks, including loading,
+  populated/empty/error/retry/401/403/malformed totals, summary/columns/sidebar link,
+  Customer/Admin regressions and 1440/768/390/320px layouts. No document overflow
+  or uncaught exceptions; table scrolls locally on narrow screens. Mobile and
+  desktop screenshots were captured outside Git; mobile was visually inspected.
+  Browser fetch responses were fixtures, not signed-in live MongoDB history.
+  Temporary public test route was removed before the production build.
+- Read-only live MongoDB inspection found four verified payments across three
+  stored Technician ownership emails; all linked bookings were completed/paid.
+  Own-query sorting/totals matched the existing verification/report rules. No
+  account, booking, service or payment was written for tests. Five local HTTP
+  smoke checks passed for guest Technician API/bridge/page and Customer/Admin
+  bridge401/no-store behavior. Scoped ESLint, TypeScript and syntax/whitespace
+  checks pass. Final default Turbopack production build passed (40/40 generated
+  pages), including both new routes and no temporary browser route. Signed-in
+  live Technician browser history remains untested; no Vercel deployment was
+  requested/performed for this feature.
+- Concurrent homepage/HowFixMateWorks edits appeared during this task and were
+  preserved. No homepage changes belong to the payment-history implementation.
+
+## Home Page: How FixMate Works section (2026-11-21)
+
+- This request authorizes a homepage UI enhancement only. Read AGENTS.md and
+  inspected the homepage plus home/shared components first. No How FixMate Works
+  section existed on `/`; the separate `/about` page keeps its own "How it works"
+  content, so this is not a duplicate homepage section. No backend API, database,
+  auth, Stripe, dependency, environment or unrelated file was changed.
+- Added `src/components/home/HowFixMateWorks.tsx`: a static Server Component
+  following the existing WhyChooseUs/CustomerReviews patterns (section id +
+  aria-labelledby, orange eyebrow, teal heading, existing Card/CardContent,
+  React Icons, Tailwind breakpoints). It renders the ordered four steps Find a
+  Service, Book a Repair, Get It Fixed, Pay Securely with the requested copy,
+  large 01-04 numbers, a teal icon tile with orange icon, a small orange Step
+  label, and consistent equal-height cards via an auto-rows-fr grid.
+- Four visually connected steps use one absolutely positioned dashed teal line
+  behind the opaque cards at `top-[52px]`, `inset-x-8`, visible only at xl where
+  the grid is four columns; it is `hidden` below xl and `aria-hidden`/pointer-events
+  none, so mobile and tablet show a clean 1-column and 2-column layout with no
+  fake connectors. Subtle hover changes (orange tint + ring) reuse the existing
+  motion-reduce-safe style; no animation libraries or gradients were added.
+- CTA is a normal Next.js Link to `/services` styled like the existing Our
+  Services button (orange, focus-visible outline) with a FiArrowRight icon.
+- Only `src/app/(root)/page.tsx` changed for integration: Banner -> OurServices ->
+  HowFixMateWorks -> WhyChooseUs -> CustomerReviews. Background rhythm stays
+  balanced (gray Banner/Our Services block, white How FixMate Works/Why Choose
+  Us block, gray Customer Reviews block). No existing section or preview notice
+  was removed; Our Services keeps its live API integration.
+- Verification: `npx tsc --noEmit` and `npx eslint src` passed; `npm run build`
+  passed. A headless Chrome CDP check at 1440/768/390px measured 4/2/1 grid
+  columns, equal 242px card heights, correct heading/numbers/titles/copy, CTA
+  text+href, connector shown only at xl, white section background and zero
+  horizontal overflow at the page and section level; screenshots were captured
+  and visually inspected. The live production homepage rendered all four steps,
+  six real Our Services cards, Why Choose Us and Customer Reviews with no console
+  errors; clicking Explore Services navigated to `/services`, whose SSR HTML
+  listed all currently visible services while the homepage stayed capped at six.
+- Temporary CDP script and screenshots live outside the repository. The concurrent
+  Technician Payment History work in this checkout was preserved untouched.
+  Stop after reporting this UI enhancement and await the next instruction.
+
+## Local development origin diagnosis and repair (2026-11-21)
+
+- User authorizes diagnosis/fix of localhost failures while preserving production.
+  Initial and repeated local GET /, /services and auth pages returned200; the
+  reported generic500/Internal Server Error was not reproduced and no500 stack
+  was present in the available current Next development log. Do not claim that
+  the historical500 was proven to have the same cause as the verified403 below.
+- Confirmed terminal error: Better Auth Invalid origin: http://localhost:3000;
+  a syntactically valid sign-in for a nonexistent diagnostic email reproduced
+  HTTP403/INVALID_ORIGIN before changes. No diagnostic signup/account was made.
+  frontend .env used the production BETTER_AUTH_URL; .env.local only overrode API
+  with the production backend. Backend .env CLIENT_URL also used production, so
+  its localhost CORS response named the wrong origin. Both URIs/database names
+  were already aligned; no MongoDB credentials, adapter or schema fix was needed.
+- Added ignored frontend .env.development.local with ONLY development origins:
+  BETTER_AUTH_URL=http://localhost:3000 and
+  NEXT_PUBLIC_API_URL=http://localhost:4000/api. Installed Next docs confirm this
+  overrides .env.local/.env during next dev, and is excluded from production builds.
+  Existing .env/.env.local and production settings/secrets remain unchanged.
+  Next hot-reloaded the file; the subsequent local sign-in reached credential
+  checking (401/INVALID_EMAIL_OR_PASSWORD) rather than rejecting localhost.
+- Added ignored backend .env.development.local with localhost CLIENT_URL and
+  BETTER_AUTH_URL. Backend npm run dev now uses Node's existing
+  --env-file-if-exists=.env.development.local before --watch index.js. Dotenv still
+  loads all existing secrets from .env; no dependency/startup/auth middleware code
+  changed. npm start and Vercel keep their original environment handling. Direct
+  nodemon index.js does not load this dev override; use npm run dev in each repo.
+- Replaced the verified old backend nodemon watcher with npm run dev. MongoDB
+  connect/ping succeeded, exact fixmateDB retained, listening on4000. Frontend dev
+  stays on3000. Backend CORS now returns http://localhost:3000 with credentials;
+  no wildcard or relaxed auth/trusted-origins rule was added. Stripe settings,
+  Checkout/webhook, payment data and production deployment were not changed.
+- During log inspection an old signup debug statement exposed the complete auth
+  success response. Removed only that console.log and unused response destructure
+  from sign-up/page.tsx; normal signup/toast/redirect behavior stays. Never dump
+  raw development logs again without filtering auth response/token output.
+  A separate user's concurrent successful signup was observed after the origin
+  fix; it was not a diagnostic test account or an independently exercised role flow.
+- Verified Next environment resolution in fresh processes: development uses both
+  localhost origins; production keeps the original HTTPS Vercel auth/API origins.
+  Verified backend dev vs normal-start resolution likewise preserves production.
+  All local override files remain ignored/untracked; no secrets were copied.
+- Local HTTP verification15/15 passed: home/services/auth pages200, real Services
+  response (11 public records at check time), guest get-session200/null, valid local
+  origin admitted to credential validation, untrusted origin still403, all three
+  role guest redirects/bridge401/no-store and backend health/CORS. No existing
+  user password/cookie was borrowed, and no auth/business record was created or
+  modified by diagnostics. Fully signed-in Customer/Technician/Admin browser
+  workflows could not be independently tested without authorized credentials.
+- Complete backend regression suite147/147 passed. Scoped signup ESLint and
+  whitespace checks pass. Final production build passed40/40 generated pages
+  with the original production origins. Headless Chrome7 checks passed using real
+  local API fetches: homepage six real services, Services listing, three actual
+  guest redirects and zero uncaught exceptions. No browser API mocks were used.
+  Existing payment-history and concurrent homepage changes were preserved.

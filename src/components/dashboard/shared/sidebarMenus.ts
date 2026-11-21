@@ -15,6 +15,7 @@ export const sidebarMenus: Record<UserRole, MenuItem[]> = {
     { title: "Add Service", url: "/dashboard/technician/add-service", icon: FiPlusCircle },
     { title: "My Services", url: "/dashboard/technician/my-services", icon: FiTool },
     { title: "Manage Requests", url: "/dashboard/technician/requests", icon: FiClipboard },
+    { title: "Payment History", url: "/dashboard/technician/payments", icon: FiCreditCard },
   ],
   admin: [
     { title: "Overview", url: "/dashboard/admin", icon: FiGrid },

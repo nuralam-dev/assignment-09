@@ -42,6 +42,8 @@ export type AdminPayment = {
   testMode?: boolean;
 };
 export type PaymentReport = {
+  totalPaidAmount?: number;
+  paidJobCount?: number;
   records: AdminPayment[];
   verificationAvailable: boolean;
   revenue: { currency: string; amount: number }[];
