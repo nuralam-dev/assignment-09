@@ -1655,3 +1655,71 @@ notes for the live My Services catalogue; unrelated dashboard previews remain.
   local API fetches: homepage six real services, Services listing, three actual
   guest redirects and zero uncaught exceptions. No browser API mocks were used.
   Existing payment-history and concurrent homepage changes were preserved.
+
+## Modern homepage workflow and About section (2026-11-21)
+
+- This request authorizes homepage UI work only. Read these instructions, inspected
+  all existing home components, Banner, OurServices, shared layout/footer, separate
+  About page and installed Next.js client/server, CSS and image guides first.
+  Existing HowFixMateWorks was replaced in place; no homepage About section existed,
+  so one AboutFixMate was added immediately after it. The separate /about page,
+  WhyChooseUs, review preview disclosure, hero/categories, live services and footer
+  remain. No new Final CTA or duplicate process/about section was added.
+- HowFixMateWorks is now a small Client Component with exactly Explore Services,
+  Book a Technician, Track Your Repair and Secure Payment. Four numbered 01–04
+  buttons implement accessible tabs, one selected tab/panel, linked IDs, a roving
+  tab stop and Left/Right/Home/End navigation with native button activation. Cards
+  show active teal/orange feedback; selected content describes the real request,
+  technician confirmation, repair tracking and completed-unpaid payment workflow.
+  The panel CTA links to /services. No timer or automatic step advancement exists.
+- Desktop has four cards with a connecting line that fills as selection changes;
+  mobile/tablet have a two-column selector and an animated progress bar. These
+  indicate the explanation's selected step, not a real customer's repair status.
+  Copy explicitly requires job completion and final-amount review before payment.
+- AboutFixMate uses the exact requested heading/description, four feature cards
+  (Secure Booking, Clear Repair Progress, Secure Stripe Checkout, Multiple Repair
+  Categories), existing Card primitives, React Icons, teal/orange accents and a
+  /about link. Desktop places the photo left and content right; below lg the image
+  comes first. Feature copy focuses on account requests, actual dashboard progress,
+  post-completion checkout and seven categories rather than repeating WhyChooseUs
+  claims. About is a Server Component with small reveal wrappers around its content.
+- New public/images/about-repair.jpg is a roughly 40KB local copy of Pexels photo
+  6755075 showing precision smartphone repair, visually inspected before use.
+  Source: https://images.pexels.com/photos/6755075/pexels-photo-6755075.jpeg
+  License checked at https://www.pexels.com/license/ (free website use permitted).
+  Source/license are also recorded in AboutFixMate.tsx. Next Image uses fill,
+  responsive sizes, reserved aspect ratio and normal lazy loading; no remote image
+  config, dependency or image-generation tool was needed for this section.
+- SectionReveal uses one IntersectionObserver per wrapper, disconnects after first
+  entrance and cleans up on unmount. Content defaults visible without JavaScript;
+  reduced-motion skips the observer and CSS removes entrance/panel animation,
+  hover movement/zoom and progress/button transitions. Hover effects only apply to
+  hover-capable pointers. All animations are short, triggered and noncontinuous.
+- Styling lives in home-sections.css, imported by the homepage and scoped through
+  fixmate-home/workflow/about class names. Actual browser verification caught this
+  checkout's custom Tailwind CSS loader emitting unscoped CSS Module rules while
+  imports used different names. The temporary CSS Module was replaced with these
+  prefixed styles; next.config.ts was preserved. Do not assume CSS Module animations
+  work here without browser verification. The final photo zoom was verified at
+  scale 1.04, not inferred from source alone.
+- Real localhost headless Chrome suite passed 57 checks with no API mocks: all
+  four clickable steps and dynamic panels/ARIA links, arrow/Home/End keyboard
+  navigation, payment wording, section uniqueness/order, image loading/hover zoom,
+  viewport layouts at 1440/1024/768/390/320px, desktop image-left/mobile image-above,
+  scroll reveals, reduced-motion styles, live /about and /services CTA navigation,
+  existing hero/footer/three review cards, and no document horizontal overflow.
+  No uncaught exceptions, console errors or hydration mismatch messages occurred.
+  Desktop/mobile screenshots were captured and visually inspected outside Git.
+- The existing services error handling was untouched. At the final localhost
+  browser check OurServices displayed six real service cards and did not show
+  "We couldn't load services" or the empty state. This is an observation of that
+  run, not a claim that the earlier API failure was diagnosed or permanently fixed.
+- Final npm run build passed (40/40 generated pages), TypeScript no-emit,
+  npx eslint src and git diff --check passed. Temporary Chrome scripts/screenshots
+  remain under /tmp/fixmate-home-modernize. No backend, database, authentication,
+  Stripe, environment, dependency or unrelated feature changes were made. Existing
+  concurrent asset/homepage edits were preserved. No deployment was requested.
+- A further 10 real-browser checks passed for the normal panel/reveal animation
+  names/durations, connecting-line scale from 0 to 1, native Space/Enter activation,
+  one roving tab stop, reduced-motion initial reload (no observer/hiding or panel
+  animation) and no exceptions/console errors: 67 browser checks across both runs.

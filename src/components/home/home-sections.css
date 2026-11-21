@@ -1,0 +1,63 @@
+.fixmate-home-reveal {
+  transition: opacity 600ms ease-out, transform 600ms ease-out;
+}
+
+.fixmate-home-reveal[data-reveal="waiting"] {
+  opacity: 0;
+  transform: translateY(20px);
+}
+
+.fixmate-home-reveal[data-reveal="visible"] {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.fixmate-workflow-step, .fixmate-about-feature, .fixmate-home-cta {
+  transition: background-color 200ms ease, color 200ms ease, border-color 200ms ease, box-shadow 200ms ease, transform 200ms ease;
+}
+
+.fixmate-workflow-connector {
+  transition: transform 400ms ease;
+}
+
+.fixmate-workflow-panel {
+  min-height: 260px;
+  animation: fixmate-panel-enter 280ms ease-out both;
+}
+
+.fixmate-about-photo img {
+  transition: transform 650ms ease;
+}
+
+@media (hover: hover) {
+  .fixmate-about-feature:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 28px rgb(9 46 51 / 8%);
+  }
+
+  .fixmate-about-photo:hover img {
+    transform: scale(1.04);
+  }
+
+  .fixmate-home-cta:hover {
+    transform: translateY(-2px);
+  }
+}
+
+@keyframes fixmate-panel-enter {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fixmate-home-reveal, .fixmate-workflow-step, .fixmate-about-feature, .fixmate-home-cta, .fixmate-workflow-connector, .fixmate-about-photo img {
+    transition: none;
+  }
+
+  .fixmate-workflow-panel { animation: none; }
+
+  .fixmate-home-reveal[data-reveal], .fixmate-about-feature:hover, .fixmate-home-cta:hover, .fixmate-about-photo:hover img {
+    opacity: 1;
+    transform: none;
+  }
+}
