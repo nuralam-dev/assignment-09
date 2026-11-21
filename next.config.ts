@@ -5,6 +5,16 @@ const nextConfig: NextConfig = {
   cacheComponents: true,
   partialPrefetching: true,
   reactCompiler: true,
+  // Homepage photos are served from the Pexels image CDN (free Pexels License).
+  // Local public/ images and dynamic service images do not need this entry.
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "images.pexels.com",
+      },
+    ],
+  },
   turbopack: {
     rules: {
       "*.css": {

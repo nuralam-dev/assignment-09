@@ -6,6 +6,7 @@ import {
   FiTool,
   FiTrendingUp,
 } from "react-icons/fi";
+import Image from "next/image";
 import { Card, CardContent } from "@/components/ui/card";
 
 const features = [
@@ -63,6 +64,18 @@ export default function WhyChooseUs() {
             Trusted repair services that make everyday life easier.
           </p>
         </header>
+
+        {/* Free Pexels photo: professional device repair bench close-up. */}
+        <div className="relative mt-10 h-56 overflow-hidden rounded-2xl md:h-80">
+          <Image
+            src="https://images.pexels.com/photos/6755056/pexels-photo-6755056.jpeg?auto=compress&cs=tinysrgb&w=1400"
+            alt="Repair technician inspecting a device circuit board under a microscope"
+            fill
+            sizes="(min-width: 1280px) 1152px, (min-width: 768px) calc(100vw - 64px), calc(100vw - 40px)"
+            className="object-cover"
+          />
+        </div>
+
         <div className="mt-10 grid auto-rows-fr gap-6 md:grid-cols-2 xl:grid-cols-3">
           {features.map(({ title, description, icon: Icon }) => (
             <Card

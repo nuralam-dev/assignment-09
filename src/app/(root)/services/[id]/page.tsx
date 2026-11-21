@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
-import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { FiArrowLeft, FiClock, FiMapPin, FiTool, FiUser } from "react-icons/fi";
 import { type Service } from "@/components/services/ServiceCard";
+import ServiceImage from "@/components/services/ServiceImage";
 import ServicesLoading from "@/components/services/ServicesLoading";
 import { getApiBaseUrl } from "@/lib/api-url";
 import BookingRequest from "@/components/bookings/BookingRequest";
@@ -75,12 +75,12 @@ async function ServiceDetail({ id }: { id: string }) {
       </Link>
 
       <div className="overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm">
-        <Image
+        <ServiceImage
           src={service.image}
           alt={service.title}
           width={1200}
           height={560}
-          unoptimized
+          sizes="(min-width: 768px) 100vw, 100vw"
           className="h-64 w-full object-cover md:h-80"
         />
 

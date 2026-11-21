@@ -1,7 +1,7 @@
-import Image from "next/image";
 import Link from "next/link";
 import { FiArrowRight, FiClock, FiMapPin, FiTool, FiUser } from "react-icons/fi";
 import { Card, CardContent } from "@/components/ui/card";
+import ServiceImage from "./ServiceImage";
 
 export type Service = {
   _id: string;
@@ -21,12 +21,12 @@ export type Service = {
 export default function ServiceCard({ service }: { service: Service }) {
   return (
     <Card className="h-full overflow-hidden rounded-2xl pt-0 shadow-sm">
-      <Image
+      <ServiceImage
         src={service.image}
         alt={service.title}
         width={600}
         height={320}
-        unoptimized
+        sizes="(min-width: 1280px) 384px, (min-width: 768px) 50vw, 100vw"
         className="h-48 w-full object-cover"
       />
       <CardContent className="flex flex-1 flex-col gap-4">
