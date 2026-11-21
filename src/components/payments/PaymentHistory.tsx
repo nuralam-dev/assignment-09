@@ -40,7 +40,7 @@ export default function PaymentHistory({ admin = false }: { admin?: boolean }) {
       ...(admin ? [<div key="customer">{record.customerName || "Not provided"}<p className="text-xs">{record.customerEmail}</p></div>] : []),
       record.serviceTitle || "Not provided", record.technicianName || "Not provided", money(record.amount, record.currency || ""), record.transactionId || "Not provided", date(record.paidAt),
       <StatusBadge key="status" status={record.paymentStatus || "unknown"} />,
-      record.verified === true && record.verificationSource === "stripe-webhook" && record.testMode === true
+      record.verified === true && ["stripe-webhook", "stripe-api"].includes(record.verificationSource || "") && record.testMode === true
         && record.paymentStatus === "paid" && record.currency === "usd" && typeof record.amount === "number"
         && Number.isFinite(record.amount) && record.amount > 0 && record.stripeSessionId?.startsWith("cs_test_")
         && record.transactionId?.startsWith("pi_") ? "Verified · Stripe Test Mode" : "Unverified · excluded from total",

@@ -11,6 +11,7 @@ export default function PaymentResult() {
   const params = useSearchParams();
   const id = params.get("session_id");
   const [paid, setPaid] = useState(false);
+  const [paymentState, setPaymentState] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [details, setDetails] = useState<{ amount: number; transactionId: string } | null>(null);
@@ -24,11 +25,12 @@ export default function PaymentResult() {
         if (response.status === 401) throw new Error("Please sign in again to check your payment.");
         const result = await response.json();
         if (!response.ok || result?.success !== true || typeof result.data?.paid !== "boolean") throw new Error("Could not verify this payment reference. Please check My Bookings.");
-        if (result.data.paid && (result.data.payment?.verified !== true || result.data.payment?.verificationSource !== "stripe-webhook"
+        if (result.data.paid && (result.data.payment?.verified !== true || !["stripe-webhook", "stripe-api"].includes(result.data.payment?.verificationSource)
           || typeof result.data.payment?.amount !== "number" || !Number.isFinite(result.data.payment.amount)
           || typeof result.data.payment?.transactionId !== "string")) throw new Error("The verified payment details are not available yet. Please try again.");
         if (!controller.signal.aborted) {
           setPaid(result.data.paid);
+          setPaymentState(result.data.state || "processing");
           setDetails(result.data.paid ? result.data.payment : null);
           setError("");
         }
@@ -40,7 +42,7 @@ export default function PaymentResult() {
   }, [id, attempt]);
   return <Card className="mx-auto max-w-xl"><CardContent className="space-y-5 p-6">
     <h1 className="text-2xl font-semibold text-[#092e33]">{loading ? "Checking payment..." : paid ? "Test payment verified" : "Payment verification"}</h1>
-    {loading ? <p role="status">Waiting for the verified backend payment record...</p> : error ? <p role="alert" className="text-red-700">{error}</p> : paid ? <><p>Your payment was verified through Stripe&apos;s signed webhook. This was a Test Mode payment.</p>{details && <p className="wrap-anywhere">{money(details.amount)} · {details.transactionId}</p>}</> : <p>Stripe confirmation is still being processed. This redirect does not mark your booking as paid. Refresh the status in a moment.</p>}
+    {loading ? <p role="status">Waiting for the verified backend payment record...</p> : error ? <p role="alert" className="text-red-700">{error}</p> : paid ? <><p>Your payment was verified directly with Stripe. This was a Test Mode payment.</p>{details && <p className="wrap-anywhere">{money(details.amount)} · {details.transactionId}</p>}</> : ["retry", "open"].includes(paymentState) ? <p>Payment has not completed. Return to My Bookings to resume or safely retry Checkout.</p> : <p>Stripe confirmation is still being processed. This redirect does not mark your booking as paid. Refresh the status in a moment.</p>}
     <div className="flex flex-wrap gap-3"><Button variant="outline" disabled={loading} onClick={() => { setLoading(true); setAttempt(value => value + 1); }}>Refresh status</Button><DashboardLink href="/dashboard/customer/bookings">My Bookings</DashboardLink><DashboardLink href="/dashboard/customer/payments">Payment History</DashboardLink></div>
   </CardContent></Card>;
 }

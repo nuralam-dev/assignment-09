@@ -1446,3 +1446,63 @@ notes for the live My Services catalogue; unrelated dashboard previews remain.
   untracked. No env values, backend code or database records were changed. No
   deployment was made without explicit permission; live verification of the fix
   remains pending redeployment.
+
+## Paid Stripe Checkout reconciliation and production webhook (2026-11-21)
+
+- This request authorizes diagnosing the existing $200 payment, trusted repair of
+  its payment state, Stripe Test Mode webhook configuration and Vercel deployment.
+  Supersedes webhook-only fulfillment/read-only success-verification notes above.
+  BetterAuth, role/ownership guards, unrelated bookings/services and auth env stay.
+- Read-only Stripe API confirmed the affected completed/unpaid/$200 booking had
+  Checkout complete/paid and PaymentIntent succeeded/received 20000 USD cents.
+  Booking/customer/attempt/session/intent metadata and MongoDB amount all matched.
+  Initially no payment document existed. It was already paid in Stripe Test Mode;
+  no second Checkout/charge was created during this diagnosis or recovery.
+- Root cause: the account had no registered webhook endpoints. Production had the
+  local CLI listener's signing secret. The old paid Session also had localhost
+  return URLs. The old create endpoint correctly refused a completed Session but
+  had no reconciliation path; the frontend hid that distinction behind a generic
+  409 error. Current production CLIENT_URL was already the correct HTTPS frontend.
+  No historical webhook failure delivery can be claimed; no endpoint was present.
+- Backend config/payments.js now shares strict Stripe retrieval/verification and
+  transactional fulfillment between signed webhook and authenticated reconciliation.
+  Source stripe-api joins stripe-webhook as a valid verified payment source.
+  Test mode, complete/paid/succeeded, USD/amount received, MongoDB finalAmount,
+  ownership/metadata/attempt linkage and the three unique partial payment indexes
+  remain required. Exact matching verified records can repair an unpaid booking
+  without another insert. Direct recovery uses Stripe charge creation time as paidAt.
+- GET /api/payments/booking/:id and existing owned /session/:id consult Stripe;
+  Checkout POST also reconciles an already-paid Session and returns paid:true.
+  Open matching Sessions are reused; expired or terminal failed Sessions can retry.
+  Processing/unknown payment intents stay blocked. New checkoutStartedAt bounds
+  retries when a Session ID was not saved; missing/old reservation timestamps fail
+  closed beyond Stripe idempotency retention rather than risk another charge.
+- Signed unpaid async completion is acknowledged without marking paid; async
+  success uses the same verified fulfillment. Safe event ID/type/status logs aid
+  retries without secrets. Raw body before express.json and signature checks stay.
+- Added narrow same-origin booking verification bridge. PayBooking checks status
+  before offering Pay Now, shows checking/processing/unknown/Paid, refreshes after
+  verification, preserves duplicate-click/Stripe-host restrictions and uses Sonner.
+  PaymentResult distinguishes unfinished from processing payments; PaymentHistory
+  and result validation accept both trusted verification sources. No sign-out or
+  authentication behavior was added/changed. Future Sessions use configured origin;
+  existing Stripe Session return URLs are historical and were not rewritten.
+- Registered enabled Test Mode endpoint at the production backend's
+  /api/payments/webhook for checkout.session.completed and
+  checkout.session.async_payment_succeeded. Stored its endpoint-specific secret
+  securely in Vercel production and deployed backend/frontend to existing aliases.
+  Local .env/CLI listener secret was not changed; no secret is in Git or these notes.
+- Production recovery occurred through the deployed authenticated Checkout POST:
+  Vercel logs show the previous 409 becoming 200 and MongoDB source stripe-api.
+  The affected booking is now paid with exactly one verified USD200 payment.
+  Replayed the ORIGINAL successful event twice through Stripe CLI to the new
+  endpoint; actual Stripe delivery received HTTP200. Invalid signatures return400.
+  Final MongoDB check after replay confirms no duplicate verified booking payment,
+  correct owner/Session/intent/paidAt, and inclusion in Customer/Admin report queries.
+- Verification: full backend suite 143/143, including recovery/history/auth checks;
+  23 temporary actual-source PayBooking handler checks, source ESLint/TypeScript,
+  Next production build (38 static pages), syntax/whitespace checks and 15 deployed
+  guest/API smoke checks. Fixtures are not signed-in browser tests. Production
+  history data/query inclusion was verified; Customer/Admin browser screens were
+  not independently exercised with user credentials. No fake records or second
+  charge, unrelated data changes, dependency installs or auth changes were made.
